@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+        <link href="css/pms.css" rel="stylesheet" type="text/css" />
+        <script src="js/jquery-3.5.1.min.js"></script>
+        <script src="js/jquery.dataTables.min.js"></script>
+        <script src="js/plotly-2.1.0.min.js"></script>
+        <script src="js/fast-stats.js"></script>
+        <title>Template Title</title>
+    </head>
+    <body>
+        <div id='myDiv' style="width: 50%"></div>
+        <br>
+        <div id='myDiv2' style="width: 50%"></div>        
+    </body>
+    <script>
+
+     let values = [];
+     let link   = { source: [], target: [], value: [] };
+     let label  = [];
+     let nodes  = [];
+     /**
+        Helper functions to simplify entry of flow data.
+        First variable is the list that holds the principal data,
+        src and dst are the names of the two nodes, and amount is the
+        value flowing from src to dst.
+      */
+     function enter_pair(list, src, dst, amount){
+         list.push({src: src, dst: dst, amount: amount});
+     }
+     /**
+      *   Re-arange data from list above into nodes and link, so 
+      *   that it can be munched by plotly.
+      */
+     function gobble(list, nodes, link){
+         values.forEach(function(entry){
+             if(-1== nodes.indexOf(entry.src)){
+                 nodes.push(entry.src);
+             }
+             if(-1== nodes.indexOf(entry.dst)){
+                 nodes.push(entry.dst);
+             }
+             let si = nodes.indexOf(entry.src);
+             let di = nodes.indexOf(entry.dst);
+             link.source.push(si);
+             link.target.push(di);
+             link.value.push(entry.amount);
+         });
+     }
+     
+     enter_pair(values, 'Molkelinie', 'UF', 80.0);
+     enter_pair(values, 'RO', 'UF',         10.0);
+     enter_pair(values, 'UF', 'HK-3',        2.5);
+     enter_pair(values, 'UF', 'RO',         87.5);
+     enter_pair(values, 'RO', 'MVR', 29.5);
+     enter_pair(values, 'RO', 'Polisher', 48.5);
+     enter_pair(values, 'MVR', 'PE-50', 11.8);
+     enter_pair(values, 'MVR', 'Brüden', 17.7);
+     enter_pair(values, 'PE-50', 'HK-1', 11.8);
+     enter_pair(values, 'HK-1', 'PE-70', 8.4);
+     enter_pair(values, 'HK-1', 'Brüden', 3.4);
+     gobble(values, nodes, link);
+     var layout = {"title": "Massenströme TP-Jessen"}
+     Plotly.newPlot('myDiv',
+                    [{
+                        type: "sankey",
+                        arrangement: 'freeform',
+                        domain: {
+                            x: [0,1],
+                            y: [0,1]
+                        },
+                        valueformat: ".1f",
+                        valuesuffix: "t/h",
+                        node:{
+                            label: nodes,
+                            pad:10, // 10 Pixels
+                        },
+                        link: link,
+                    }],
+                    layout);
+     
+     values = [];
+     nodes  = [];
+     link   = { source: [], target: [], value: [] };
+     enter_pair(values, 'Molkelinie', 'UF', 80*0.05);
+     enter_pair(values, 'UF', 'HK-3', 2*0.22);
+     enter_pair(values, 'UF', 'RO', 118*0.0305);
+     enter_pair(values, 'RO', 'UF',  40*0.0001);
+     enter_pair(values, 'RO', 'MVR', 29.5*0.122);
+     enter_pair(values, 'RO', 'Polisher', 48.5 *0.0001);
+     enter_pair(values, 'MVR', 'PE-50', 11.8*0.305);
+     enter_pair(values, 'MVR', 'Brüden', 17.7*0.0001);
+     enter_pair(values, 'PE-50', 'HK-1', 11.8*0.305);
+     enter_pair(values, 'HK-1', 'PE-70', 8.4*0.429);
+     enter_pair(values, 'HK-1', 'Brüden', 3.4*0.0001);
+     gobble(values, nodes, link);
+     data = [{
+         type: "sankey",
+         domain: {
+             x: [0,1],
+             y: [0,1]
+         },
+         valueformat: ".1f",
+         valuesuffix: "t/h",
+         node:{
+             label: nodes,
+             pad:10, // 10 Pixels
+         },
+         link: link,
+     }];
+     layout = {"title": "Trockenmassenströme TP-Jessen"}
+     Plotly.newPlot('myDiv2', data, layout)
+
+     
+    </script>
+</html>
