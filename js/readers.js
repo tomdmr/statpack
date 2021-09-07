@@ -9,38 +9,36 @@ Array.prototype.removeIf = function(callback) {
 
 function readKeyValues(inText){
     let sampleData = [];
-    // Split into lines
-    //let tdata = inText.split('\n');
     inText.trim().split('\n').
-           forEach(function(line){
-               //console.log(line);
-               let fields=line.trim().split(/[\t;]+/);
-               if(fields.length>1){
-                   key = fields.shift();
-                   fields.forEach(function(val, idx, fields){
-                       if (val !==''){
-                           fields[idx] =  parseFloat(val.replace(',', '.'));
-                       }
-                   });
-               }
-               // Remove all invalid elements
-               fields.removeIf(function(item){ return isNaN(item); });
-               // Run through sampleData and search key
-               for(i=0; i<sampleData.length; i++){
+        forEach(function(line){
+            let key='';
+            let values = [];
+            if(line==='') return;
+            let fields = line.trim().split(/[\t;]/);
+            if(fields.length > 1){
+                key = fields.shift();
+                fields.forEach(function(val){
+                    let z = parseFloat(val.replace(',', '.'));
+                    if( !isNaN(z) ) values.push(z);
+                });
+            }
+            else{ return; }
+
+            if(values.length>0){
+                for(i=0; i<sampleData.length; i++){
                    if( sampleData[i].name === key){
-                       sampleData[i].s.push(fields);
+                       sampleData[i].s.push(values);
                        i=sampleData.length + 2;
                    }
-               }
-               // If we reached the end of the previous loop, this means
-               // key and fields are new
-               if(i==sampleData.length){
-                   sampleData.push({
-                       name: key,
-                       s: new Stats({sampling: true}).push(fields),
-                   });
-               }
-           });
+                }
+                if(i==sampleData.length){
+                    sampleData.push({
+                        name: key,
+                        s: new Stats({sampling: true}).push(values),
+                    });
+                }
+            }
+        });
     return sampleData;
 }
 
