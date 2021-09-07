@@ -11,7 +11,7 @@ function readKeyValues(inText){
     let sampleData = [];
     // Split into lines
     //let tdata = inText.split('\n');
-    inText.split('\n').
+    inText.trim().split('\n').
            forEach(function(line){
                //console.log(line);
                let fields=line.trim().split(/[\t;]+/);
@@ -46,7 +46,7 @@ function readKeyValues(inText){
 
 function readValues(inText){
     let s = new Stats({sampling: true});
-    inText.split('\n').forEach(function(line){
+    inText.trim().split('\n').forEach(function(line){
         let fields=line.trim().split(/[\t;]+/);
         fields.forEach(function(val){
             let tmp = parseFloat(val.replace(',', '.'));
