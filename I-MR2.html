@@ -22,63 +22,57 @@
         <title>I-MR Chart (Regelkarte)</title>
     </head>
     <body>
-        <h2>Regelkarte für I-MR</h2>
-        Regelkarte zur Darstellung von Produktionsverläufen. Das
-        I-MR-Chart wird benutzt, wenn pro Charge nur ein
-        charakteristischer Messwert zur Verfügung steht.
-        <p>In das Datenfeld zeilenweise Zahlen
-            eingeben, bei Bedarf noch oberen und unteren
-            Spezifikationswert eingeben.
-            <p>
-                <table>
-                    <tr>
-                        <td>Titel</td><td><input type="text" id="title" value="" /></td></td>
-                    </tr>
-                    <tr>
-                        <td>USL:</td><td><input type="number" id="iusl" /></td>
-                    </tr>
-                    <tr>
-                        <td>LSL:</td><td><input type="number" id="ilsl" /></td>
-                    </tr>
-                    <tr>
-                        <td>Daten</td>
-                        <td>
-                            <textarea id="tdata">
-                            </textarea>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td><button onclick="makeDiag()">Make</button></td>
-                        <td><button onclick="makeImg('myDiv', 'jpg-export')">Copy</button></td>
-                    </tr>
-                    <tr>
-                        <td>Width</td><td><input type="number" id="cWidth" value="600" onchange="cHWChange()" /></td>
-                    </tr>
-                    <tr>
-                        <td>Height</td><td><input type="number" id="cHeight" value="300" onchange="cHWChange()"" /></td>
-                    </tr>
-                </table>
-                <p>
-                    <div id='myDiv' class="resizable" onresize="doResize()"></div>
-                    <br>
-                </p>
-                <img id="jpg-export"></img>
+        <h2>I-MR Chart</h2>
+        <table>
+            <tr>
+                <td>Titel</td><td><input type="text" id="title" value="" /></td>
+            </tr>
+            <tr>
+                <td>USL:</td><td><input type="number" id="iusl" /></td>
+            </tr>
+            <tr>
+                <td>LSL:</td><td><input type="number" id="ilsl" /></td>
+            </tr>
+            <tr>
+                <td>Daten</td>
+                <td>
+                    <textarea id="tdata" rows="8" cols="60">
+                    </textarea>
+                </td>
+            </tr>
+            <tr>
+                <td><button onclick="makeDiag()">Make</button></td>
+                <td><button onclick="makeImg('myDiv', 'jpg-export')">Copy</button></td>
+            </tr>
+            <tr>
+                <td>Width</td><td><input type="number" id="cWidth" value="600" onchange="cHWChange()" /></td>
+            </tr>
+            <tr>
+                <td>Height</td><td><input type="number" id="cHeight" value="300" onchange="cHWChange()"" /></td>
+            </tr>
+        </table>
+        <p>
+            <table id="pTab">
+            </table>
+        </p>
+        <p>
+            <div id='myDiv' class="resizable" onresize="doResize(this)"></div>
+            <br>
+        </p>
+        <img id="jpg-export"></img>
     </body>
     <script>
-     function IMR(data){
+     cHWChange();
+     function getIMRValues(data){
+         let s = new Stats({sampling: true});
          let MR = [];
-         let MRBar = 0;
-         let IBar  = data[0];
-         //console.log(data.length);
-         for(i=1; i<data.length; i++){
-             dx = Math.abs(data[i]-data[i-1]);
+         for(i=1; i<data.data.length; i++){
+             let dx = Math.abs(data.data[i]-data.data[i-1]);
+             s. push(dx);
              MR.push(dx);
-             MRBar += dx;
-             IBar  += data[i];
          }
-         //console.log(MR);
-         IBar   /= data.length;
-         MRBar  /= (data.length-1);
+         let IBar   =  data.amean();
+         let MRBar  =  s.amean();
 
          LCL_MR = 0.0;
          UCL_MR = 3.267 * MRBar;
@@ -86,24 +80,109 @@
          UCL_I  = IBar + 2.66*MRBar;
          return {'MR': MR, 'LCL_MR': LCL_MR, 'UCL_MR': UCL_MR, 'LCL_I': LCL_I, 'IBar': IBar, 'UCL_I': UCL_I};
      }
+     /*
 
-     function IMR_Chart(divName, data, title, usl, lsl){
-         let dataIdx  = Array.from({length: data.length}, (_, i) => i + 1);
-         let mrIdx    = dataIdx.slice(1);
-         let IMR_Result = IMR(data);
-         let stats = new Stats().push(data);
-         let IViol = {x: [], y:[]};
-         for (i=0; i< data.length; i++){
-             if( (data[i]>IMR_Result.UCL_I) || (data[i]<IMR_Result.LCL_I)){
-                 IViol.x.push(i+1);
-                 IViol.y.push(data[i]);
+        The rules for declaring significant changes in your process
+        for the individuals are:
+        1 data point outside of 3 standard deviations,
+        2 out of 3 outside of 2 standard deviations,
+        4 out of 5 outside of one standard deviation and
+        8 on the same side of the target.
+
+      */
+
+     function IMRRulesCheck(stats, mean, stddev){
+         let is1Dev = [];
+         let is2Dev = [];
+         let is3Dev = [];
+         let r4Sum  = 0;
+         let r4Sign = 0;
+         let rule1  = [];
+         let rule2  = [];
+         let rule3  = [];
+         let rule4  = [];
+         stats.data.forEach(function(sample, idx){
+             //console.log(sprintf('Idx: %2d Value: %f', idx, sample));
+             is1Dev[idx] = Math.abs(sample - mean)>   stddev? true : false;
+             is2Dev[idx] = Math.abs(sample - mean)>2.*stddev? true : false;
+             is3Dev[idx] = Math.abs(sample - mean)>3.*stddev? true : false;
+             r4Sum = Math.sign(sample - mean) == r4Sign ? r4Sum + 1 : 0;
+             r4Sign = Math.sign(sample - mean);
+             //console.log(r4Sum);
+             rule1[idx] = is3Dev[idx];
+             rule2[idx] = (idx>1) && ( is2Dev[idx-2] + is2Dev[idx-1] + is2Dev[idx] >1)
+             if(rule2[idx]){
+                 rule3[idx-1] = rule3[idx-2] = true;
              }
-         }
-         // Data plot
-         var Data = {
+
+             rule3[idx] = (idx>3) && ( is1Dev[idx-4] + is1Dev[idx-3] + is1Dev[idx-2] + is1Dev[idx-1] + is1Dev[idx]>3 );
+             if(rule3[idx]){
+                 rule3[idx-1] = rule3[idx-2] = rule3[idx-3] = true;
+             }
+             rule4[idx] = r4Sum > 7;
+             if(rule4[idx]){
+                 rule4[idx-1] = rule4[idx-2] = rule4[idx-3] = rule4[idx-3] = rule4[idx-5] = rule4[idx-6] = rule4[idx-7] = true;
+             }
+             /*
+                if(rule1[idx]) console.log('Rule 1: '+idx);
+                if(rule2[idx]) console.log('Rule 2: '+idx);
+                if(rule3[idx]) console.log('Rule 3: '+idx);
+                if(rule4[idx]) console.log('Rule 4: '+idx);
+              */
+         });
+         return [rule1, rule2, rule3, rule4];
+     }
+
+     function makeDiag(){
+         //document.getElementById('tdata').value = text;
+         let data = readValues(document.getElementById('tdata').value);
+         SpL = (document.getElementById('iusl').value === '')
+             ||(document.getElementById('ilsl').value === '') ? 
+               [] 
+             : [ Number(document.getElementById('ilsl').value), Number(document.getElementById('iusl').value) ];
+         console.log(SpL);
+
+         let SpLvl =     [ Number(document.getElementById('ilsl').value), Number(document.getElementById('iusl').value) ];
+
+         IMRChart('myDiv',
+                  data,
+                  document.getElementById('title').value,
+                  SpL
+         );
+     }
+     function IMRChart(divName, data, myTitle, SL){
+         let IMR_Result = getIMRValues(data);
+         let rr = IMRRulesCheck(data, IMR_Result.IBar, (IMR_Result.UCL_I-IMR_Result.LCL_I)/6.0);
+
+         let table=document.getElementById('pTab');
+         table.innerHTML ='';
+         let row=table.insertRow(-1);
+         let c1 = row.insertCell(-1);
+         let c2 = row.insertCell(-1);
+         c1.innerHTML = 'N';  c2.innerHTML = data.data.length;
+         row=table.insertRow(-1); c1 = row.insertCell(-1); c2 = row.insertCell(-1);
+         c1.innerHTML = 'UCL';  c2.innerHTML = sprintf('%8f',IMR_Result.UCL_I);
+
+         row=table.insertRow(-1); c1 = row.insertCell(-1); c2 = row.insertCell(-1);
+         c1.innerHTML = 'IBar';  c2.innerHTML = sprintf('%8f',IMR_Result.IBar);
+
+         row=table.insertRow(-1); c1 = row.insertCell(-1); c2 = row.insertCell(-1);
+         c1.innerHTML = 'LCL';  c2.innerHTML = sprintf('%8f',IMR_Result.LCL_I);
+
+         row=table.insertRow(-1); c1 = row.insertCell(-1); c2 = row.insertCell(-1);
+         c1.innerHTML = 'UCL R';  c2.innerHTML = sprintf('%8f',IMR_Result.UCL_MR);
+
+         let IViol = {x: [], y:[]};
+         data.data.forEach(function(val, idx){
+             if( rr[0][idx] || rr[1][idx] || rr[2][idx] || rr[3][idx] ){
+                 IViol.x.push(idx+1);
+                 IViol.y.push(val);
+             }
+         });
+         let Data = {
              type: 'scatter',
-             x: dataIdx,
-             y: data,
+             x: Array.from({length: data.length}, (_, i) => i + 1),
+             y: data.data,
              mode: 'lines+markers',
              name: 'Data',
              showlegend: true,
@@ -118,8 +197,7 @@
                  symbol: 'circle'
              }
          }
-         // Violations
-         var Viol = {
+         let Viol = {
              type: 'scatter',
              x: IViol.x,
              y: IViol.y,
@@ -137,7 +215,7 @@
          // Control Limits
          var CL = {
              type: 'scatter',
-             x: [0.5, data.length, null, 0.5, data.length],
+             x: [0.5, data.data.length, null, 0.5, data.data.length],
              //y: [-5, -5, null, 5, 5],
              y: [IMR_Result.LCL_I, IMR_Result.LCL_I, null, IMR_Result.UCL_I, IMR_Result.UCL_I],
              mode: 'lines',
@@ -152,7 +230,7 @@
          // Centerline
          var Centre = {
              type: 'scatter',
-             x: [0.5, data.length],
+             x: [0.5, data.data.length],
              y: [IMR_Result.IBar,IMR_Result.IBar],
              //[ 0, 0],
              mode: 'lines',
@@ -163,9 +241,10 @@
                  width: 2
              }
          }
+
          var MRMR = {
              type: 'scatter',
-             x: mrIdx,
+             x: Array.from({length: data.length}, (_, i) => i + 1).slice(1),
              y: IMR_Result.MR,
              name: 'MR',
              mode: 'lines+markers',
@@ -196,11 +275,11 @@
              xaxis: 'x1',
              yaxis: 'y2',
          }
-         var plData = [Data,Viol,CL,Centre, MRMR, MRCL]
+         let plData = [Data, Viol, CL, Centre, MRMR, MRCL];
          if( SL.length ){
              plData.push({
                  type: 'scatter',
-                 x: [0.5, data.length, null, 0.5, data.length],
+                 x: [0.5, data.data.length, null, 0.5, data.data.length],
                  y: [SL[0], SL[0], null, SL[1], SL[1]],
                  mode: 'lines',
                  name: 'LSL/USL',
@@ -213,13 +292,7 @@
              }
              );
          }
-         if (typeof(title) == "undefined"){
-             console.log('No Title');
-             myTitle = 'SPC Run-Chart, IBar-MR'
-         }else{
-             myTitle = title;
-         }
-         var layout = {
+         let layout = {
              title: myTitle,
              grid: {rows: 2, columns: 1,},
              xaxis: {
@@ -230,55 +303,13 @@
                  zeroline: false
              },
          }
-         var img_jpg= d3.select('#jpg-export');
-         let clientHeight = document.getElementById(divName).clientHeight;
-         let clientWidth  = document.getElementById(divName).clientWidth;
+
          Plotly.newPlot(divName, plData,layout,  {editable: true, responsive: true},);
-     }
-
-     // @params blob - The ClipboardItem takes an object with the MIME type as key, and the actual blob as the value.
-     // @return Promise<void>
-     const setToClipboard = async blob => {
-         const data = [new ClipboardItem({ [blob.type]: blob })]
-         await navigator.clipboard.write(data)
-     }
-
-
-     function makeDiag(){
-         let sampleData = [];
-         let title = document.getElementById('title').value;
-         let tdata = document.getElementById('tdata').value.split('\n');
-         let LSL   = document.getElementById('ilsl').value;
-         let USL   = document.getElementById('iusl').value;
-         console.log(tdata);
-         if((USL ==='') || (LSL==='')){
-             console.log('No usl');
-             SL = []
-         }
-         else{
-             SL = [Number(USL), Number(LSL)];
-         }
-         console.log(title);
-         //console.log(tdata);
-         tdata.forEach(function(line){
-             line=line.trim().replace(',', '.');
-             if( line !== ''){
-                 sampleData.push(Number(line));
-                 //console.log(Number(line));
-             }
-         });
-         IMR_Chart('myDiv', sampleData, title, SL);
      }
      function cHWChange(){
          let W = document.getElementById('cWidth').value;
          let H = document.getElementById('cHeight').value;
          document.getElementById('myDiv').setAttribute("style","Width:"+ W +'px;Height:'+ H+'px');
-     }
-     
-     function syntheticResize(){
-         var evt = window.document.createEvent('UIEvents');
-         evt.initUIEvent('resize', true, false, 0);
-         window.dispatchEvent(evt);
      }
     </script>
 </html>
