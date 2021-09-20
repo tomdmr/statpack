@@ -53,7 +53,42 @@ function readValues(inText){
     });
     return s;
 }
+function readKeyPairs(inText){
+    let sampleData = [];
+    inText.trim().split('\n').
+        forEach(function(line){
+            let key='';
+            let values = [];
+            if(line==='') return;
+            let fields = line.trim().split(/[\t;]/);
+            if(fields.length > 2){
+                key = fields.shift();
+                fields.forEach(function(val){
+                    let z = parseFloat(val.replace(',', '.'));
+                    if( !isNaN(z) ) values.push(z);
+                });
+            }
+            else{ return; }
 
+            if(values.length == 2){
+                for(i=0; i<sampleData.length; i++){
+                    if( sampleData[i].name === key){
+                        sampleData[i].x.push(values[0]);
+                        sampleData[i].y.push(values[1]);
+                        i=sampleData.length + 2;
+                    }
+                }
+                if(i==sampleData.length){
+                    sampleData.push({
+                        name: key,
+                        x   : [values[0]],
+                        y   : [values[1]],
+                    });
+                }
+            }
+        });
+    return sampleData;
+}
 async function makeImg(divName, imgName){
     let img = d3.select('#'+imgName);
     let graphDiv = document.getElementById(divName);
