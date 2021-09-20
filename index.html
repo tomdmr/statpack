@@ -1,0 +1,63 @@
+<!doctype html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+        <link href="css/pms.css" rel="stylesheet" type="text/css" />
+        <!-- script src="js/jquery-3.5.1.min.js"></script  -->
+        <!-- script src="js/jquery.dataTables.min.js"></script -->
+        <script src="js/readers.js"></script>
+        <script src="js/sprintf.min.js"></script>
+        <script src="js/d3.v7.min.js"></script>
+        <script src="js/plotly-2.1.0.min.js"></script>
+        <script src="js/fast-stats.js"></script>
+        <style>
+         .resizable {
+             resize: both;
+             overflow: scroll;
+             border: 1px solid black;
+             width: 600px;
+             height: 300px;
+         }
+        </style>
+        <title>Tom’s StatPak</title>
+    </head>
+    <body>
+        <h2>Some Stupid Title</h2>
+        <p>
+            Sammlung von quick&amp;dirty Routine für die statistische
+            Analyse in der QM. Grundsätzlich sind die Seiten sehr
+            ähnlich aufgebaut. Oben ist die Header-Sektion in der Titel oder sonstige Parameter eingtragen werden.
+        </p>
+        <p>
+            Daran schließt sich das Dateneingabefeld an. Manche Daten
+            sind ganz einfach reingepastete Textzeilen. Die können, je
+            nach Seite, unterschiedliches Format haben. Typisch wäre «Schlüssel&lt;tab&gt;Zahl[&lt;tab&gt;Zahl]&lt;newline&gt».
+        </p>
+        <table>
+            <thead>
+                <tr>
+                    <td> Link </td>
+                    <td> Beschreibung </td>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><a href="I-MR2.html">I-MR</a></td>
+                    <td>Regelkarte für 1 Messung pro Produktion</td>
+                </tr>
+                <tr>
+                    <td><a href="X-R2.html">X-R</a></td>
+                    <td>Regelkarte für n Samples pro Produktion</td>
+                </tr>
+                <tr>
+                    <td><a href="mBox2.html">Multi-Box</a></td>
+                    <td>Box-Plot von n Verteilungen mit beliebiger Anzahl von einzehlnen Samples und statistischer Analyse</td>
+                </tr>
+                <tr>
+                    <td><a href="scatter2.html">Simple Scatter</a></td>
+                    <td>Scatter-Plot nach Namen</td>
+                </tr>
+            </tbody>
+        </table>
+    </body>
+</html>

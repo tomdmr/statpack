@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+        <link href="css/pms.css" rel="stylesheet" type="text/css" />
+        <!-- script src="js/jquery-3.5.1.min.js"></script  -->
+        <!-- script src="js/jquery.dataTables.min.js"></script -->
+        <script src="js/readers.js"></script>
+        <script src="js/sprintf.min.js"></script>
+        <script src="js/d3.v7.min.js"></script>
+        <script src="js/plotly-2.1.0.min.js"></script>
+        <script src="js/fast-stats.js"></script>
+        <style>
+         .resizable {
+             resize: both;
+             overflow: scroll;
+             border: 1px solid black;
+             width: 600px;
+             height: 300px;
+         }
+        </style>
+        <title>Multi-Scatter Chart (Regelkarte)</title>
+    </head>
+    <body>
+        <h2>Multi-Scatter Chart</h2>
+        <p>
+            Mehrere Datenreihen als Scatter-Plot. Das Datenformat ist
+            "Name\tx-Wert\ty-Wert\n", Im Moment sind noch keine
+            statistischen Berechnungen hinterlegt.
+        </p>
+        <table>
+            <tr>
+                <td>Titel</td><td><input type="text" id="title" value="" /></td>
+            </tr>
+            <tr>
+                <td>x-Achse Titel</td><td><input type="text" id="xtitle" value="" /></td>
+            </tr>
+            <tr>
+                <td>y-Achse Titel</td><td><input type="text" id="ytitle" value="" /></td>
+            </tr>
+            <tr>
+                <td>Daten</td>
+                <td>
+                    <textarea id="tdata" rows="8" cols="60">
+                    </textarea>
+                </td>
+            </tr>
+            <tr>
+                <td><button onclick="makeDiag()">Make</button></td>
+                <td><button onclick="makeImg('myDiv', 'jpg-export')">Copy</button></td>
+            </tr>
+            <tr>
+                <td>Width</td><td><input type="number" id="cWidth" value="600" onchange="cHWChange()" /></td>
+            </tr>
+            <tr>
+                <td>Height</td><td><input type="number" id="cHeight" value="300" onchange="cHWChange()"" /></td>
+            </tr>
+        </table>
+        <p>
+            <div id='myDiv' class="resizable" onresize="doResize(this)"></div>
+            <br>
+        </p>
+        <img id="jpg-export"></img>
+    </body>
+    <script>
+     cHWChange();
+     function cHWChange(){
+         let W = document.getElementById('cWidth').value;
+         let H = document.getElementById('cHeight').value;
+         document.getElementById('myDiv').setAttribute("style","Width:"+ W +'px;Height:'+ H+'px');
+     }
+     function makeDiag(){
+         //document.getElementById('tdata').value = text;
+         let divName = 'myDiv';
+         let sampleData = readKeyPairs(document.getElementById('tdata').value);
+         let title  = document.getElementById( 'title').value;
+         let xtitle = document.getElementById('xtitle').value;
+         let ytitle = document.getElementById('ytitle').value;
+
+         let plData = [];
+         sampleData.forEach(function(item){
+             let ss = { 
+                 x : item.x,
+                 y : item.y,
+                 name : item.name,
+                 type : 'scatter',
+                 mode : 'markers',
+             };
+             plData.push(
+                 ss
+             );
+         });
+         let layout = {
+             title: title,
+             xaxis: {
+                 title: xtitle,
+             },
+             yaxis: {
+                 title: ytitle,
+             },
+         };
+         Plotly.newPlot(divName, plData,layout,  {editable: true, responsive: true},);
+     }
+     document.getElementById('tdata').value = 'hs\t5.51\t6.3\n'
+                                             +'nicht hs\t5.94\t6.6\n'
+                                             +'nicht hs\t6.02\t6.19\n'
+                                             +'nicht hs\t5.87\t6.12\n'
+                                             +'nicht hs\t5.95\t6.02\n';
+    </script>
+</html>
