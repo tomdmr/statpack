@@ -285,27 +285,6 @@
              SL = [Number(USL), Number(LSL)];
          }
          console.log(title);
-         /*
-            tdata.forEach(function(line){
-            console.log(line);
-            // TODO: take all values on this line and push them.
-            fields=line.trim().split('/[\t ]+/');
-            if( fields.length>1){
-            value = Number(fields[1].replace(',', '.'));
-            key   = fields[0];
-            }
-            for(i=0; i<sampleData.length; i++){
-            if( sampleData[i][0] === key){
-            sampleData[i].push(value);
-            i=sampleData.length + 2;
-            }
-            }
-            console.log(fields.length);
-            if(i==sampleData.length){
-            sampleData.push([key, value]);
-            }
-            });
-          */
          let sampleData = readKeyValues( document.getElementById('tdata').value );
          //console.log(sampleData);
          let MMin=1e9;
