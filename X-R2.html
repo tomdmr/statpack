@@ -59,6 +59,10 @@
                     </td>
                 </tr>
                 <tr>
+                    <td>Filter</td>
+                    <td><input type="checkbox" id="doFilter"/> nur genau <input id="recLength" type="number" />Daten/Schlüssel</td>
+                </tr>
+                <tr>
                     <td><button onclick="makeDiag()">Make</button></td>
                     <td><button onclick="makeImg('myDiv', 'jpg-export')">Copy</button></td>
                 </tr>
@@ -76,6 +80,7 @@
             <img id="jpg-export"></img>
     </body>
     <script>
+     cHWChange();
      /*
       *
       * Compute basic statistics for an I-MR chart:
@@ -272,7 +277,7 @@
 
      }
      function makeDiag(){
-         //let sampleData = [];
+         let sampleData = [];
          let title = document.getElementById('title').value;
          let tdata = document.getElementById('tdata').value.split('\n');
          let LSL   = document.getElementById('ilsl').value;
@@ -285,8 +290,20 @@
              SL = [Number(USL), Number(LSL)];
          }
          console.log(title);
-         let sampleData = readKeyValues( document.getElementById('tdata').value );
-         //console.log(sampleData);
+         let recLength = Number(document.getElementById('recLength').value);
+         if(document.getElementById('doFilter').checked && recLength > 0){
+             let rawData = readKeyValues( document.getElementById('tdata').value );
+             rawData.forEach(function(item){
+                 if(item.s.length == recLength){
+                     sampleData.push(item);
+                 }
+             });
+         }else{
+             sampleData = readKeyValues( document.getElementById('tdata').value );
+         }
+         /*
+          */
+         console.log(sampleData);
          let MMin=1e9;
          sampleData.forEach(function(sample){
              if(sample.s.length<MMin) MMin = sample.s.length;
