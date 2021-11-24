@@ -35,9 +35,8 @@
             </tr>
             <tr>
                 <td>Daten</td>
-                <td>
-                    <textarea id="tdata" rows="8" cols="60">
-                    </textarea>
+                <td colspan="3">
+                    <textarea id="tdata" rows="8" cols="60"></textarea>
                 </td>
             </tr>
             <tr>
@@ -46,9 +45,13 @@
             </tr>
             <tr>
                 <td>Width</td><td><input type="number" id="cWidth" value="600" onchange="cHWChange()" /></td>
+                <td><input id="R1" type="checkbox" checked="true">1 > 3 StDev off </td>
+                <td><input id="R2" type="checkbox">2 of 3 > 2 StdDev </td>
             </tr>
             <tr>
                 <td>Height</td><td><input type="number" id="cHeight" value="300" onchange="cHWChange()"" /></td>
+                <td><input id="R3" type="checkbox">4 of 5 > 1 StdDev</td>
+                <td><input id="R4" type="checkbox">8 of 8 same side of mean </td>
             </tr>
         </table>
         <p>
@@ -108,20 +111,33 @@
              is3Dev[idx] = Math.abs(sample - mean)>3.*stddev? true : false;
              r4Sum = Math.sign(sample - mean) == r4Sign ? r4Sum + 1 : 0;
              r4Sign = Math.sign(sample - mean);
-             //console.log(r4Sum);
-             rule1[idx] = is3Dev[idx];
-             rule2[idx] = (idx>1) && ( is2Dev[idx-2] + is2Dev[idx-1] + is2Dev[idx] >1)
-             if(rule2[idx]){
-                 rule3[idx-1] = rule3[idx-2] = true;
-             }
 
-             rule3[idx] = (idx>3) && ( is1Dev[idx-4] + is1Dev[idx-3] + is1Dev[idx-2] + is1Dev[idx-1] + is1Dev[idx]>3 );
-             if(rule3[idx]){
-                 rule3[idx-1] = rule3[idx-2] = rule3[idx-3] = true;
+             let doR1 = document.getElementById('R1').checked;
+             let doR2 = document.getElementById('R2').checked;
+             let doR3 = document.getElementById('R3').checked;
+             let doR4 = document.getElementById('R4').checked;
+             //console.log(r4Sum);
+             if(doR1){
+                 rule1[idx] = is3Dev[idx];
              }
-             rule4[idx] = r4Sum > 7;
-             if(rule4[idx]){
-                 rule4[idx-1] = rule4[idx-2] = rule4[idx-3] = rule4[idx-3] = rule4[idx-5] = rule4[idx-6] = rule4[idx-7] = true;
+             if(doR2){
+                 rule2[idx] = (idx>1) && ( is2Dev[idx-2] + is2Dev[idx-1] + is2Dev[idx] >1)
+                 if(rule2[idx]){
+                     rule3[idx-1] = rule3[idx-2] = true;
+                 }
+             }
+             if(doR3){
+
+                 rule3[idx] = (idx>3) && ( is1Dev[idx-4] + is1Dev[idx-3] + is1Dev[idx-2] + is1Dev[idx-1] + is1Dev[idx]>3 );
+                 if(rule3[idx]){
+                     rule3[idx-1] = rule3[idx-2] = rule3[idx-3] = true;
+                 }
+             }
+             if(doR4){
+                 rule4[idx] = r4Sum > 7;
+                 if(rule4[idx]){
+                     rule4[idx-1] = rule4[idx-2] = rule4[idx-3] = rule4[idx-3] = rule4[idx-5] = rule4[idx-6] = rule4[idx-7] = true;
+                 }
              }
              /*
                 if(rule1[idx]) console.log('Rule 1: '+idx);
@@ -137,8 +153,8 @@
          //document.getElementById('tdata').value = text;
          let data = readValues(document.getElementById('tdata').value);
          SpL = (document.getElementById('iusl').value === '')
-             ||(document.getElementById('ilsl').value === '') ? 
-               [] 
+             ||(document.getElementById('ilsl').value === '') ?
+               []
              : [ Number(document.getElementById('ilsl').value), Number(document.getElementById('iusl').value) ];
          console.log(SpL);
 
@@ -299,7 +315,7 @@
                  zeroline: false
              },
              yaxis: {
-                 //range: [-20,20],
+                 // range: [5.70, 6.75],
                  zeroline: false
              },
          }
