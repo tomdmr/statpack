@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html>
     <head>
@@ -29,10 +30,15 @@
                 <td>Titel</td><td><input type="text" id="title" value="" /></td>
             </tr>
             <tr>
+                <td>Einheit x:</td><td><input type="text" id="xtitle" value="" /></td>
+            </tr>
+            <tr>
+                <td>Einheit y:</td><td><input type="text" id="ytitle" value="" /></td>
+            </tr>
+            <tr>
                 <td>Daten</td>
                 <td>
-                    <textarea id="tdata" rows="8" cols="60">
-                    </textarea>
+                    <textarea id="tdata" rows="8" cols="60"></textarea>
                 </td>
             </tr>
             <tr>
@@ -43,7 +49,13 @@
                 <td>Width</td><td><input type="number" id="cWidth" value="600" onchange="cHWChange()" /></td>
             </tr>
             <tr>
-                <td>Height</td><td><input type="number" id="cHeight" value="300" onchange="cHWChange()"" /></td>
+                <td>Height</td><td><input type="number" id="cHeight" value="300" onchange="cHWChange()" /></td>
+            </tr>
+            <tr>
+                <td>Y-Max</td><td><input type="number" id="yMax" value=""/></td>
+            </tr>
+            <tr>
+                <td>Y-Min</td><td><input type="number" id="yMin" value=""/></td>
             </tr>
         </table>
         <p>
@@ -99,9 +111,22 @@
          sampleData.forEach(function(item, idx, val){
              item.type = 'box';
              item.boxpoints = 'suspectedoutliers';
+             item.showlegend = false;
          });
          console.log(sampleData);
          let layout = {};
+         layout.title = title;
+         /* FIXME: Does not work */
+         layout.xaxis= { title: {text: document.getElementById('xtitle').value}, }
+         layout.yaxis= { title: {text: document.getElementById('ytitle').value}, }
+         let yMin = document.getElementById('yMin').value;
+         let yMax = document.getElementById('yMax').value;
+         if( (yMin !=="") && (yMax !== "") ){
+             layout.yaxis.range = [yMin, yMax];
+         }
+         console.log('Layout:');
+         console.log(layout);
+
          sampleData.forEach(function(val, idx, trace){
              trace[idx].y = trace[idx].s.data;
          })
@@ -154,26 +179,9 @@
                  cell = row.insertCell(-1);
                  cell.innerHTML = sig[i][j];
              }
-             /*
-                for(j=0; j<i+1; j++){
-                cell = row.insertCell(-1);
-                if(j==i)cell.innerHTML = '--';
-                }
-                for(j=i+1; j<sampleData.length; j++){
-                //let p=studentT(sampleData[i].s, sampleData[j].s);
-                console.log(sampleData[i].name + ' '+ sampleData[j].name);
-                let p=welchT(sampleData[i].s, sampleData[j].s);
-                //console.log(i+' '+j+': '+p);
-                res += sprintf(' %8.4f', p);
-                let cell = row.insertCell(-1);
-                cell.innerHTML = sprintf(' %8.4f', p);
-                }
-                //console.log(res);
-              */
          }
 
          Plotly.newPlot('myDiv', sampleData, layout,  {editable: true, responsive: true},);
-         //Plotly.react('myDiv', sampleData, layout,  {editable: true, responsive: true},);
      }
      function cHWChange(){
          let W = document.getElementById('cWidth').value;
