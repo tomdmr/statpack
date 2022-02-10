@@ -53,6 +53,12 @@
                 <td><input id="R3" type="checkbox">4 of 5 > 1 StdDev</td>
                 <td><input id="R4" type="checkbox">8 of 8 same side of mean </td>
             </tr>
+            <tr>
+                <td>Y-Max</td><td><input type="number" id="yMax" value=""/></td>
+            </tr>
+            <tr>
+                <td>Y-Min</td><td><input type="number" id="yMin" value=""/></td>
+            </tr>
         </table>
         <p>
             <table id="pTab">
@@ -318,6 +324,11 @@
                  // range: [5.70, 6.75],
                  zeroline: false
              },
+         }
+         let yMin = document.getElementById('yMin').value;
+         let yMax = document.getElementById('yMax').value;
+         if( (yMin !=="") && (yMax !== "") ){
+             layout.yaxis.range = [yMin, yMax];
          }
 
          Plotly.newPlot(divName, plData,layout,  {editable: true, responsive: true},);
