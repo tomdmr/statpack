@@ -74,6 +74,10 @@
                 </tr>
             </table>
             <p>
+                <table id="pTab">
+                </table>
+            </p>
+            <p>
                 <div id='myDiv' class="resizable" onresize="doResize()"></div>
                 <br>
             </p>
@@ -149,9 +153,25 @@
          };
      }
 
-     function XMR_Chart(data, divName){
+     function XMR_Chart(divName, data, myTitle, SL){
          let XMR_Result = XMR(data);
          console.log(XMR_Result);
+
+         let table=document.getElementById('pTab');
+         table.innerHTML ='';
+         let row=table.insertRow(-1);
+         let c1 = row.insertCell(-1);
+         let c2 = row.insertCell(-1);
+         c1.innerHTML = 'N';  c2.innerHTML = data.length;
+
+         row=table.insertRow(-1); c1 = row.insertCell(-1); c2 = row.insertCell(-1);
+         c1.innerHTML = 'Xbar';
+         c2.innerHTML = sprintf('%8.4f +- %8.4f',XMR_Result.XBar, XMR_Result.UCL -XMR_Result.XBar);
+         row=table.insertRow(-1); c1 = row.insertCell(-1); c2 = row.insertCell(-1);
+         c1.innerHTML = 'Batch Range';
+         c2.innerHTML = sprintf('%8.4f < %8.4f < %8.4f', XMR_Result.LCLR, XMR_Result.RBar, XMR_Result.UCLR);
+
+
          let dataIdx  = Array.from({length: data.length}, (_, i) => i + 1);
          let XViol = {x: [], y:[]};
 
@@ -263,7 +283,7 @@
          }
          var plData = [Data,Viol, CL,Centre, MRMR, MRCL]
          var layout = {
-             title: 'SPC Run-Chart, XBar-R',
+             title: myTitle,
              grid: {rows: 2, columns: 1,},
              xaxis: {
                  zeroline: false
@@ -314,7 +334,11 @@
             sampleData.forEach(function(sample){ sample.length=MMin; });
           */
          console.log(sampleData);
-         XMR_Chart(sampleData, 'myDiv');
+         let SpL = (document.getElementById('iusl').value === '')
+                 ||(document.getElementById('ilsl').value === '') ?
+                   []
+                 : [ Number(document.getElementById('ilsl').value), Number(document.getElementById('iusl').value) ];
+         XMR_Chart('myDiv', sampleData, document.getElementById('title').value, SpL);
      }
      function cHWChange(){
          let W = document.getElementById('cWidth').value;
