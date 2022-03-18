@@ -183,16 +183,16 @@
          let c2 = row.insertCell(-1);
          c1.innerHTML = 'N';  c2.innerHTML = data.data.length;
          row=table.insertRow(-1); c1 = row.insertCell(-1); c2 = row.insertCell(-1);
-         c1.innerHTML = 'UCL';  c2.innerHTML = sprintf('%8f',IMR_Result.UCL_I);
+         c1.innerHTML = 'UCL';  c2.innerHTML = sprintf('%8.4f',IMR_Result.UCL_I);
 
          row=table.insertRow(-1); c1 = row.insertCell(-1); c2 = row.insertCell(-1);
-         c1.innerHTML = 'IBar';  c2.innerHTML = sprintf('%8f',IMR_Result.IBar);
+         c1.innerHTML = 'IBar';  c2.innerHTML = sprintf('%8.4f +- %8.4f',IMR_Result.IBar, IMR_Result.UCL_I-IMR_Result.IBar);
 
          row=table.insertRow(-1); c1 = row.insertCell(-1); c2 = row.insertCell(-1);
-         c1.innerHTML = 'LCL';  c2.innerHTML = sprintf('%8f',IMR_Result.LCL_I);
+         c1.innerHTML = 'LCL';  c2.innerHTML = sprintf('%8.4f',IMR_Result.LCL_I);
 
          row=table.insertRow(-1); c1 = row.insertCell(-1); c2 = row.insertCell(-1);
-         c1.innerHTML = 'UCL R';  c2.innerHTML = sprintf('%8f',IMR_Result.UCL_MR);
+         c1.innerHTML = 'UCL R';  c2.innerHTML = sprintf('%8.4f',IMR_Result.UCL_MR);
 
          let IViol = {x: [], y:[]};
          data.data.forEach(function(val, idx){
