@@ -41,7 +41,34 @@ function readKeyValues(inText){
         });
     return sampleData;
 }
-
+function readRadar(inText){
+    let first = true;
+    let theta = [];
+    let sampleData = [];
+    inText.trim().split('\n').forEach(function(line){
+        let fields=line.trim().split(/[\t;]+/);
+        if(first){
+            fields.forEach(function(val){
+                //console.log('Item: '+val);
+                theta.push(val);
+            })
+            theta.push(theta[0]);
+            first = false;
+        }
+        else{
+            let key = fields.shift();
+            let s = []; //new Stats({sampling: true});
+            //console.log('Sample key :'+key);
+            fields.forEach(function(val){
+                let tmp = parseFloat(val.replace(',', '.'));
+                if(!isNaN(tmp)){s.push(tmp)}
+            });
+            s.push(s[0]);
+            sampleData.push({ name: key, data: s});
+        }
+    });
+    return [theta, sampleData];
+}
 function readValues(inText){
     let s = new Stats({sampling: true});
     inText.trim().split('\n').forEach(function(line){
@@ -100,4 +127,10 @@ async function makeImg(divName, imgName){
         img.attr("src", dataUrl);
         //doies not work: copyImage(url);
     });
+}
+
+function cHWChange2(w, h, t){
+    let W = document.getElementById(w).value;
+    let H = document.getElementById(h).value;
+    document.getElementById(t).setAttribute("style","Width:"+ W +'px;Height:'+ H+'px');
 }
