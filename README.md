@@ -4,8 +4,9 @@ A collection of simple files to quickly produce meaningful charts for
 Statistical Process Controll (SPC). It relies mostly on the great
 [Plotly graphics library](https://plotly.com/javascript/) to present the results.
 
-The additional statistics in some files is either knowledge I gathered
-and used in praxis from a Six-Sigma Black Belt course.
+The additional statistics in some files is mostly knowledge I gathered
+and used in praxis from a Six-Sigma Black Belt course. For the rest, I do not
+remember where I snatched it.
 
 The general workflow is to load the file in a browser, and dump data
 into a textfield. The format can be quite free. If a file requires
@@ -25,7 +26,7 @@ libraries into the directory `js`. These are
 
   * The graphics stuff, [Plotly](https://github.com/plotly/plotly.js/)
   * Data Driven Documents, [D3](https://github.com/d3/d3)
-  * Some statistic from [Fast Statistics]{https://github.com/bluesmoon/node-faststats}
+  * Some statistic from [Fast Statistics](https://github.com/bluesmoon/node-faststats)
   * [sprintf](https://github.com/alexei/sprintf.js)
   * Some distributions were taken from [Thomas S. Ferguson](https://www.math.ucla.edu/~tom/distributions/CONTENTS.html)
   
