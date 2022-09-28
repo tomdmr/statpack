@@ -158,7 +158,7 @@
      function makeDiag(){
          //document.getElementById('tdata').value = text;
          let data = readValues(document.getElementById('tdata').value);
-         SpL = (document.getElementById('iusl').value === '')
+         let SpL = (document.getElementById('iusl').value === '')
              ||(document.getElementById('ilsl').value === '') ?
                []
              : [ Number(document.getElementById('ilsl').value), Number(document.getElementById('iusl').value) ];
