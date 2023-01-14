@@ -116,6 +116,39 @@ function readKeyPairs(inText){
         });
     return sampleData;
 }
+function readPairsGlob(inText){
+    let sampleData = [[], []];
+    let dst = 0;
+    inText.trim().split(/[\n\t;]/).
+           forEach(function(item){
+               console.log(item);
+               let z = parseFloat(item.replace(',', '.'));
+               sampleData[dst].push(z);
+               dst = 1-dst;
+           });
+    return sampleData;
+}
+/**
+ * Read exactly two values per line
+ */
+function readPairs(inText){
+    let sampleData = [[], []];
+    let dst = 0;
+    inText.trim().split(/[\n]/).
+        forEach(function(item){
+            //console.log(item);
+            let pair = item.split(/[\t;]/);
+            //console.log(pair);
+            if( pair.length>1){
+                let x = parseFloat(pair[0].replace(',', '.'));
+                let y = parseFloat(pair[1].replace(',', '.'));
+                // TODO: Check both are valid
+                sampleData[0].push(x);
+                sampleData[1].push(y);
+            }
+        });
+    return sampleData;
+}
 async function makeImg(divName, imgName){
     let img = d3.select('#'+imgName);
     let graphDiv = document.getElementById(divName);
