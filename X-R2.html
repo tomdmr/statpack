@@ -86,10 +86,7 @@
     <script>
      cHWChange();
      /*
-      *
-      * Compute basic statistics for an I-MR chart:
-      * MR     : Moving range
-      * MRMean : Mean of ranges
+      * Compute basics of an X-MR chart
       */
      /*
         // https://www.isixsigma.com/topic/d2-d3-d4-c4-a2-novice-question-2/
@@ -126,6 +123,7 @@
              let xmin =  1e9;
              let xmax = -1e9;
              let XjBar= 0.0;
+             let localM = prod.s.length-1;
              prod.s.data.forEach(function(measure, jdx){
                  if(jdx){
                      if(measure > xmax) xmax = measure;
@@ -136,7 +134,7 @@
              });
              RBar += xmax - xmin;
              Ri[idx] = xmax - xmin;
-             XiBar[idx] = XjBar / M;
+             XiBar[idx] = XjBar / M; // M
              Mini[idx] = XiBar[idx]-xmin;
              Maxi[idx] = xmax-XiBar[idx];
          });
@@ -319,7 +317,12 @@
                  }
              });
          }else{
-             sampleData = readKeyValues( document.getElementById('tdata').value );
+             let rawData = readKeyValues( document.getElementById('tdata').value );
+             rawData.forEach(function(item){
+                 if(item.s.length > 2){
+                     sampleData.push(item);
+                 }
+             });
          }
          /*
           */
