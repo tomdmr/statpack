@@ -44,7 +44,7 @@
             </tr>
             <tr>
                 <td>Daten</td>
-                <td>
+                <td colspan="3">
                     <textarea id="tdata" rows="8" cols="60"></textarea>
                 </td>
             </tr>
@@ -64,9 +64,18 @@
             <tr>
                 <td>Y-Min</td><td><input type="number" id="yMin" value=""/></td>
             </tr>
+            <tr>
+                <td>Show CI</td><td><input type="checkbox" id="cbShowCI" checked="true"/></td>
+                <td>Show pred SE</td><td><input type="checkbox" id="cbShowSE" checked="true"/></td>
+            </tr>
         </table>
         <p>
             <table id="pTab">
+                <tr><td>N</td><td id="resN"</td></tr>
+                <tr><td>r²</td><td id="resR2"</td></tr>
+                <tr><td>a</td><td id="resA"</td></tr>
+                <tr><td>b</td><td id="resB"</td></tr>
+                <tr><td>SE</td><td id="resSE"</td></tr>
             </table>
         </p>
         <p>
@@ -110,7 +119,7 @@
          let xL = 0.5*(x1+x2)-0.55*(x2-x1);
          let xH = 0.5*(x1+x2)+0.55*(x2-x1);
 
-         
+
          let plData = [];
          let ss = {
              x: sampleData[0],
@@ -192,46 +201,48 @@
              predL.push(yd-tCrit*predSE);
              predH.push(yd+tCrit*predSE);
          }
-         ss = {
-             x: xRange,
-             y: ciL,
-             name: 'CI',
-             type : 'scatter',
-             mode : 'lines',
-             line: { color: 'rgb(255,0,155)',width: 1, dash:'dash'},
-         };
-         plData.push(ss);
-         ss = {
-             x: xRange,
-             y: ciH,
-             showlegend: false,
-             name: 'ciH',
-             type : 'scatter',
-             mode : 'lines',
-             line: { color: 'rgb(255,0,155)',width: 1, dash:'dash'},
-         };
-         plData.push(ss);
-
-         ss = {
-             x: xRange,
-             y: predL,
-             name: 'SE predict',
-             type : 'scatter',
-             mode : 'lines',
-             line: { color: 'rgb(155,0,255)',width: 1, dash:'dash'},
-         };
-         plData.push(ss);
-         ss = {
-             x: xRange,
-             y: predH,
-             showlegend: false,
-             name: 'predH',
-             type : 'scatter',
-             mode : 'lines',
-             line: { color: 'rgb(155,0,255)',width: 1, dash:'dash'},
-         };
-         plData.push(ss);
-
+         if(document.getElementById('cbShowCI').checked){
+             ss = {
+                 x: xRange,
+                 y: ciL,
+                 name: 'CI',
+                 type : 'scatter',
+                 mode : 'lines',
+                 line: { color: 'rgb(255,0,155)',width: 1, dash:'dash'},
+             };
+             plData.push(ss);
+             ss = {
+                 x: xRange,
+                 y: ciH,
+                 showlegend: false,
+                 name: 'ciH',
+                 type : 'scatter',
+                 mode : 'lines',
+                 line: { color: 'rgb(255,0,155)',width: 1, dash:'dash'},
+             };
+             plData.push(ss);
+         }
+         if(document.getElementById('cbShowSE').checked){
+             ss = {
+                 x: xRange,
+                 y: predL,
+                 name: 'SE predict',
+                 type : 'scatter',
+                 mode : 'lines',
+                 line: { color: 'rgb(155,0,255)',width: 1, dash:'dash'},
+             };
+             plData.push(ss);
+             ss = {
+                 x: xRange,
+                 y: predH,
+                 showlegend: false,
+                 name: 'predH',
+                 type : 'scatter',
+                 mode : 'lines',
+                 line: { color: 'rgb(155,0,255)',width: 1, dash:'dash'},
+             };
+             plData.push(ss);
+         }
          //console.log(plData);
          let layout = {
              title: title,
@@ -242,7 +253,17 @@
                  title: ytitle,
              },
          };
+         let yMin = document.getElementById('yMin').value;
+         let yMax = document.getElementById('yMax').value;
+         if( (yMin !=="") && (yMax !== "") ){
+             layout.yaxis.range = [yMin, yMax];
+         }
          Plotly.newPlot('myDiv', plData,  layout, {editable: true, responsive: true},);
+         document.getElementById('resN').innerHTML = reg.n;
+         document.getElementById('resR2').innerHTML = reg.r*reg.r;
+         document.getElementById('resA').innerHTML = reg.a;
+         document.getElementById('resB').innerHTML = reg.b;
+         document.getElementById('resSE').innerHTML = sRes;
      }
      function cHWChange(){
          let W = document.getElementById('cWidth').value;
@@ -277,4 +298,20 @@
      100	10102
 
      */
+     https://www.real-statistics.com/regression/confidence-and-prediction-intervals/
+     5;80
+     23;78
+     25;60
+     48;53
+     17;85
+     8;84
+     4;73
+     26;79
+     11;81
+     19;75
+     14;68
+     35;72
+     29;58
+     4;92
+     23;65
 -->
