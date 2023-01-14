@@ -1,0 +1,208 @@
+<!doctype html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+        <link href="css/pms.css" rel="stylesheet" type="text/css" />
+        <script src="js/plotly-2.1.0.min.js"></script>
+        <script src="js/fast-stats.js"></script>
+        <script src="js/sfunc.js"></script>
+        <script src="js/sprintf.js"></script>
+        <script src="js/readers.js"></script>
+        <script src="js/d3.v7.min.js"></script>
+        <style>
+         .resizable {
+             resize: both;
+             /*
+                overflow: scroll;
+                border: 1px solid black;
+              */
+             width: 600px;
+             height: 300px;
+         }
+        </style>
+        <title>Bland-Altman Vergleichsplot</title>
+    </head>
+    <body>
+        <h2>Bland-Altman Vergleichsplot</h2>
+        <p>
+            Vergleich, wie gut zwei Meßmethoden übereinstimmen,
+            insbesondere Referenzmethode und Schnellmethode.
+        </p>
+        <p>
+            Daten müssen in geordneten Paaren für das gleiche Sample
+            vorliegen, getrennt durch Tab oder ";"
+        </p>
+
+        <table>
+            <tr>
+                <td>Titel</td><td><input type="text" id="title" value="" /></td>
+            </tr>
+            <tr>
+                <td>Einheit x:</td><td><input type="text" id="xtitle" value="" /></td>
+            </tr>
+            <tr>
+                <td>Einheit y:</td><td><input type="text" id="ytitle" value="" /></td>
+            </tr>
+            <tr>
+                <td>Daten</td>
+                <td>
+                    <textarea id="tdata" rows="8" cols="60"></textarea>
+                </td>
+            </tr>
+            <tr>
+                <td><button onclick="makeDiag()">Make</button></td>
+                <td><button onclick="makeImg('myDiv', 'jpg-export')">Copy</button></td>
+            </tr>
+            <tr>
+                <td>Width</td><td><input type="number" id="cWidth" value="600" onchange="cHWChange()" /></td>
+            </tr>
+            <tr>
+                <td>Height</td><td><input type="number" id="cHeight" value="300" onchange="cHWChange()" /></td>
+            </tr>
+            <tr>
+                <td>Y-Max</td><td><input type="number" id="yMax" value=""/></td>
+            </tr>
+            <tr>
+                <td>Y-Min</td><td><input type="number" id="yMin" value=""/></td>
+            </tr>
+        </table>
+        <p>
+            <table id="pTab">
+            </table>
+        </p>
+        <p>
+            <div id='myDiv' class="resizable" onresize="doResize(this)"></div>
+            <br>
+        </p>
+        <img id="jpg-export"></img>
+        <script>
+         cHWChange();
+         function makeDiag(){
+             let myTitle = document.getElementById('title').value;
+             let sampleData = readPairs( document.getElementById('tdata').value );
+             //console.log(sampleData);
+
+             let means = new Stats({sampling: true});
+             let diffs = new Stats({sampling: true});
+             for(i=0; i<sampleData[0].length; i++){
+                 means.push( 0.5* (sampleData[1][i] + sampleData[0][i]));
+                 diffs.push(      (sampleData[1][i] - sampleData[0][i]));
+             }
+             let bias = diffs.amean();
+             let sd   = diffs.stddev();
+             console.log("bias: %f sd: %f", bias, sd);
+             console.log("tVal: %f", t_Dist(2.05, 29));
+             console.log("tVal_inv: %f", Math.abs(_subt(29, 0.975)));
+             let Data = {
+                 type: 'scatter',
+                 x: means.data,
+                 y: diffs.data,
+                 mode: 'markers',
+                 name: 'Data',
+                 showlegend: true,
+                 hoverinfo: 'all',
+                 marker: {
+                     color: 'blue',
+                     size: 8,
+                     symbols: 'circle'
+                 }
+             }
+             let lBias = {
+                 type: 'scatter', mode: 'line', showlegend: true,
+                 x: [1800, 1800],
+                 y: [bias, bias],
+             }
+             let Bias = {
+                 type: 'line',
+                 xref: 'paper',
+                 x0: 0,
+                 x1: 1,
+                 yref: 'y',
+                 y0: bias,
+                 y1: bias,
+                 name: 'Bias',
+                 line: {color: 'red'}
+             }
+             let uLOA = {
+                 type: 'line',
+                 xref: 'paper',
+                 x0: 0,
+                 x1: 1,
+                 yref: 'y',
+                 y0: bias+1.96*sd,
+                 y1: bias+1.96*sd,
+                 name: 'Bias',
+                 line: {color: 'red', dash: 'dot'},
+             }
+             let lLOA = {
+                 type: 'line',
+                 xref: 'paper',
+                 x0: 0,
+                 x1: 1,
+                 yref: 'y',
+                 y0: bias-1.96*sd,
+                 y1: bias-1.96*sd,
+                 name: 'Bias',
+                 line: {color: 'red', dash: 'dot'},
+             }
+             
+             let plData = [Data];
+             let Shapes = [Bias, lLOA, uLOA];
+             let layout = {
+                 title: myTitle,
+                 xaxis: {},
+                 yaxis: {
+                     zeroline: false,
+                 },
+                 shapes: Shapes,
+                 annotations: [
+                     {
+                         xref: 'paper', yref: 'y', x:1, y:bias, yanchor: 'bottom', showarrow: false,
+                         text: sprintf('Bias %8.4f', bias),
+                     },
+                     {
+                         xref: 'paper', yref: 'y', x:1, y: bias+1.96*sd, yanchor: 'bottom', showarrow: false,
+                         text: sprintf('Upper LOA %8.4f', bias+1.96*sd),
+                     },
+                     {
+                         xref: 'paper', yref: 'y', x:1, y: bias-1.96*sd, yanchor: 'bottom', showarrow: false,
+                         text: sprintf('Lower LOA %8.4f', bias-1.96*sd),
+                     },
+                 ],
+             };
+             let yMin = document.getElementById('yMin').value;
+             let yMax = document.getElementById('yMax').value;
+             if( (yMin !=="") && (yMax !== "") ){
+                 layout.yaxis.range = [yMin, yMax];
+             }
+             Plotly.newPlot('myDiv', plData,layout,  {editable: true, responsive: true},);
+
+             let table = document.getElementById('pTab');
+             table.innerHTML = '';
+             let row = table.insertRow(-1);
+             let c1 = row.insertCell(-1);
+             let c2 = row.insertCell(-1);
+             c1.innerHTML='N'; c2.innerHTML = sampleData[0].length;
+             let se = sd/Math.sqrt(sampleData[0].length);
+             let sel= sd*Math.sqrt(3/sampleData[0].length);
+             console.log(se, sel);
+             row = table.insertRow(-1);c1=row.insertCell(-1); c2=row.insertCell(-1);
+             c1.innerHTML='Bias'; c2.innerHTML=bias;
+
+             
+             row = table.insertRow(-1);c1=row.insertCell(-1); c2=row.insertCell(-1);
+             c1.innerHTML='uLOA'; c2.innerHTML=bias+1.96*sd;
+
+             row = table.insertRow(-1);c1=row.insertCell(-1); c2=row.insertCell(-1);
+             c1.innerHTML='lLOA'; c2.innerHTML=bias-1.96*sd;
+
+         }
+         function cHWChange(){
+             let W = document.getElementById('cWidth').value;
+             let H = document.getElementById('cHeight').value;
+             document.getElementById('myDiv').setAttribute("style","Width:"+ W +'px;Height:'+ H+'px');
+         }
+        </script>
+        
+    </body>
+</html>

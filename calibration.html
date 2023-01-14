@@ -1,0 +1,280 @@
+<!doctype html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+        <link href="css/pms.css" rel="stylesheet" type="text/css" />
+        <script src="js/plotly-2.1.0.min.js"></script>
+        <!-- script src="../js/fast-stats.js"></script -->
+        <script src="js/sfunc.js"></script>
+        <script src="js/sprintf.js"></script>
+        <script src="js/readers.js"></script>
+        <script src="js/d3.v7.min.js"></script>
+        <script src="js/statistics-distribution.js"></script>
+        <style>
+         <style>
+         .resizable {
+             resize: both;
+             overflow: scroll;
+             border: 1px solid black;
+             width: 600px;
+             height: 300px;
+         }
+        </style>
+        </style>
+        <title>Calibration Tester</title>
+    </head>
+    <body>
+        <h2>Kalibrationstester</h2>
+        Eingabe von (x,y)-Datenpaaren. Es wird eine Kalibrationsgerade
+        bestimmt, und auf Outlier getestet.
+        <p>
+            Das innere an der Regressionsgeraden liegende Kurvenpaar
+            zeigt die Unsicherheit der Regressionsgeraden. Mit einer
+            Wahrscheinlichkeit con 95% liegt die wahre Ausgleichskurve zwischen den beiden Kurven.
+        </p>
+        <table>
+            <tr>
+                <td>Titel</td><td><input type="text" id="title" value="" /></td>
+            </tr>
+            <tr>
+                <td>Einheit x:</td><td><input type="text" id="xtitle" value="" /></td>
+            </tr>
+            <tr>
+                <td>Einheit y:</td><td><input type="text" id="ytitle" value="" /></td>
+            </tr>
+            <tr>
+                <td>Daten</td>
+                <td>
+                    <textarea id="tdata" rows="8" cols="60"></textarea>
+                </td>
+            </tr>
+            <tr>
+                <td><button onclick="makeDiag()">Make</button></td>
+                <td><button onclick="makeImg('myDiv', 'jpg-export')">Copy</button></td>
+            </tr>
+            <tr>
+                <td>Width</td><td><input type="number" id="cWidth" value="600" onchange="cHWChange()" /></td>
+            </tr>
+            <tr>
+                <td>Height</td><td><input type="number" id="cHeight" value="300" onchange="cHWChange()" /></td>
+            </tr>
+            <tr>
+                <td>Y-Max</td><td><input type="number" id="yMax" value=""/></td>
+            </tr>
+            <tr>
+                <td>Y-Min</td><td><input type="number" id="yMin" value=""/></td>
+            </tr>
+        </table>
+        <p>
+            <table id="pTab">
+            </table>
+        </p>
+        <p>
+            <div id='myDiv' class="resizable" onresize="doResize(this)"></div>
+            <br>
+        </p>
+        <img id="jpg-export"></img>
+
+    </body>
+    <script>
+     const arrayRange = (start, stop, step) =>
+         Array.from(
+             { length: (stop - start) / step + 1 },
+             (value, index) => start + index * step
+         );
+     cHWChange();
+
+     function makeDiag(){
+         let title  = document.getElementById( 'title').value;
+         let xtitle = document.getElementById('xtitle').value;
+         let ytitle = document.getElementById('ytitle').value;
+         let sampleData = readPairs(document.getElementById('tdata').value);
+         n = Math.min(sampleData[0].length, sampleData[1].length);
+         let reg = linearRegression(sampleData[0], sampleData[1]);
+         console.log(reg.r*reg.r);
+         // from: https://www.real-statistics.com/regression/regression-analysis/
+         let xMean = reg.sX/reg.n;
+         let ss_T= reg.sY2 - reg.sY*reg.sY/reg.n;
+         let ss_Res = ss_T*(1-reg.r*reg.r);
+         let ss_Reg = ss_T-ss_Res;
+
+         console.log(ss_T, ss_Reg, ss_Res);
+         let sRes = Math.sqrt(ss_Res/(reg.n-2));
+         // stderror for normalized residuals of
+         // https://statologie.de/standardisierte-residuen-excel/
+         console.log(sRes);
+         let ssX= reg.sX2-reg.sX*reg.sX/reg.n;
+
+         let x1 = Math.min(...sampleData[0]);
+         let x2 = Math.max(...sampleData[0]);
+         let xL = 0.5*(x1+x2)-0.55*(x2-x1);
+         let xH = 0.5*(x1+x2)+0.55*(x2-x1);
+
+         
+         let plData = [];
+         let ss = {
+             x: sampleData[0],
+             y: sampleData[1],
+             name: 'Data',
+             showlegend: true,
+             type : 'scatter',
+             mode : 'markers',
+             marker: {
+                 color: 'blue',
+                 symbol: 'circle',
+                 size: 8
+             }
+         };
+         plData.push(ss);
+         // Compute standardized residuals and mark outliers as red
+         let xViol=[];
+         let yViol=[];
+         for(let i=0; i<reg.n; i++){
+             // residual
+             let x0 = sampleData[0][i];
+             let resid = -(x0*reg.b+reg.a - sampleData[1][i]);
+             // Leverage:
+             let lever = 1/reg.n + (x0-xMean)*(x0-xMean)/ssX;
+             let stdResid = resid/(sRes*Math.sqrt(1-lever));
+             console.log(resid, lever, stdResid);
+             if(Math.abs(stdResid)>2){ // Should be two or three
+                 xViol.push(x0);
+                 yViol.push(sampleData[1][i]);
+             }
+         }
+         if(xViol.length > 0){
+             plData.push({
+                 type: 'scatter',
+                 x: xViol,
+                 y: yViol,
+                 mode: 'markers',
+                 name: 'Outlier',
+                 showlegend: true,
+                 marker: {
+                     color: 'rgb(255,65,54)',
+                     line: {width: 3},
+                     opacity: 0.5,
+                     size: 12,
+                     symbol: 'circle-open'
+                 }
+             });
+         }
+         // Plot regression line
+         console.log( sprintf("%.4fx+%.4f", reg.b, reg.a) );
+         plData.push({
+             x: [xL, xH],
+             y: [xL*reg.b + reg.a, xH*reg.b + reg.a],
+             name: sprintf("%.4fx+%.4f", reg.b, reg.a), // 'berechnet',
+             type : 'scatter',
+             mode : 'lines',
+             line: {
+                 color: 'blue',
+                 width: 2,
+             },
+         });
+         //
+         let xRange = arrayRange(xL, xH, (xH-xL)/20 );
+         let ciL = [];
+         let ciH = [];
+         let predL = [];
+         let predH = [];
+         let tCrit = tdistr(reg.n-2, 0.025)
+         for(let i=0; i<=20; i++){
+             let x0 = xRange[i];
+             let yd = reg.a+reg.b*x0;
+             // Error of regression line
+             let confSE = sRes*Math.sqrt(1/reg.n + (x0-xMean)*(x0-xMean)/ssX);
+             // error of predictor line
+             let predSE = sRes*Math.sqrt(1+1/reg.n+(x0-xMean)*(x0-xMean)/ssX);
+             ciL.push(yd-tCrit*confSE);
+             ciH.push(yd+tCrit*confSE);
+
+             predL.push(yd-tCrit*predSE);
+             predH.push(yd+tCrit*predSE);
+         }
+         ss = {
+             x: xRange,
+             y: ciL,
+             name: 'CI',
+             type : 'scatter',
+             mode : 'lines',
+             line: { color: 'rgb(255,0,155)',width: 1, dash:'dash'},
+         };
+         plData.push(ss);
+         ss = {
+             x: xRange,
+             y: ciH,
+             showlegend: false,
+             name: 'ciH',
+             type : 'scatter',
+             mode : 'lines',
+             line: { color: 'rgb(255,0,155)',width: 1, dash:'dash'},
+         };
+         plData.push(ss);
+
+         ss = {
+             x: xRange,
+             y: predL,
+             name: 'SE predict',
+             type : 'scatter',
+             mode : 'lines',
+             line: { color: 'rgb(155,0,255)',width: 1, dash:'dash'},
+         };
+         plData.push(ss);
+         ss = {
+             x: xRange,
+             y: predH,
+             showlegend: false,
+             name: 'predH',
+             type : 'scatter',
+             mode : 'lines',
+             line: { color: 'rgb(155,0,255)',width: 1, dash:'dash'},
+         };
+         plData.push(ss);
+
+         //console.log(plData);
+         let layout = {
+             title: title,
+             xaxis: {
+                 title: xtitle,
+             },
+             yaxis: {
+                 title: ytitle,
+             },
+         };
+         Plotly.newPlot('myDiv', plData,  layout, {editable: true, responsive: true},);
+     }
+     function cHWChange(){
+         let W = document.getElementById('cWidth').value;
+         let H = document.getElementById('cHeight').value;
+         document.getElementById('myDiv').setAttribute("style","Width:"+ W +'px;Height:'+ H+'px');
+     }
+
+    </script>
+</html>
+<!--
+     // https://statologie.de/standardisierte-residuen-excel/
+     /*
+     8;41
+     12;42
+     12;39
+     13;37
+     14;35
+     16;39
+     17;45
+     22;46
+     24;39
+     26;49
+     29;55
+     30;57
+
+     Set 2
+     0	125
+     20	2133
+     40	3988
+     60	6123
+     80	8976
+     100	10102
+
+     */
+-->
