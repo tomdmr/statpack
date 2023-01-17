@@ -100,7 +100,6 @@
          let sampleData = readPairs(document.getElementById('tdata').value);
          n = Math.min(sampleData[0].length, sampleData[1].length);
          let reg = linearRegression(sampleData[0], sampleData[1]);
-         console.log(reg.r*reg.r);
          // from: https://www.real-statistics.com/regression/regression-analysis/
          let xMean = reg.sX/reg.n;
          let ss_T= reg.sY2 - reg.sY*reg.sY/reg.n;
@@ -145,7 +144,7 @@
              // Leverage:
              let lever = 1/reg.n + (x0-xMean)*(x0-xMean)/ssX;
              let stdResid = resid/(sRes*Math.sqrt(1-lever));
-             console.log(resid, lever, stdResid);
+             //console.log(resid, lever, stdResid);
              if(Math.abs(stdResid)>2){ // Should be two or three
                  xViol.push(x0);
                  yViol.push(sampleData[1][i]);
@@ -201,6 +200,19 @@
              predL.push(yd-tCrit*predSE);
              predH.push(yd+tCrit*predSE);
          }
+         /** KILLME **/
+         // https://stats.stackexchange.com/questions/342632/how-to-understand-se-of-regression-slope-equation
+         let SE_b1 = Math.sqrt((reg.sY2 - reg.sY*reg.sY/reg.n)/(reg.sX2 - reg.sX*reg.sX/reg.n)/(reg.n-2));
+         console.log("SE_b1", SE_b1);
+         let confSE1 = sRes*Math.sqrt(1/reg.n + (x1-xMean)*(x1-xMean)/ssX);
+         let confSE2 = sRes*Math.sqrt(1/reg.n + (x2-xMean)*(x2-xMean)/ssX);
+         console.log(confSE1*tCrit, confSE2*tCrit);
+         let y1L = reg.a+reg.b*x1 - tCrit*confSE1;
+         let y1H = reg.a+reg.b*x1 + tCrit*confSE1;
+         let y2L = reg.a+reg.b*x2 - tCrit*confSE2;
+         let y2H = reg.a+reg.b*x2 + tCrit*confSE2;
+         console.log((y2H-y1L)/(x2-x1), (y2L-y1H)/(x2-x1));
+         /** To here **/
          if(document.getElementById('cbShowCI').checked){
              ss = {
                  x: xRange,
@@ -261,8 +273,8 @@
          Plotly.newPlot('myDiv', plData,  layout, {editable: true, responsive: true},);
          document.getElementById('resN').innerHTML = reg.n;
          document.getElementById('resR2').innerHTML = reg.r*reg.r;
-         document.getElementById('resA').innerHTML = reg.a;
-         document.getElementById('resB').innerHTML = reg.b;
+         document.getElementById('resA').innerHTML =  reg.a;
+         document.getElementById('resB').innerHTML = sprintf("%.4f, [%.4f, %.4f]", reg.b, reg.b-SE_b1, reg.b+SE_b1);
          document.getElementById('resSE').innerHTML = sRes;
      }
      function cHWChange(){
@@ -314,4 +326,6 @@
      29;58
      4;92
      23;65
+     StdError for a and b
+     https://stats.stackexchange.com/questions/289457/proof-for-the-standard-error-of-parameters-in-linear-regression     
 -->
