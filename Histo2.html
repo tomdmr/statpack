@@ -5,7 +5,8 @@
         <link href="css/pms.css" rel="stylesheet" type="text/css" />
         <!-- script src="js/jquery-3.5.1.min.js"></script -->
         <!-- script src="js/jquery.dataTables.min.js"></script -->
-        <script src="js/plotly-2.1.0.min.js"></script>
+        <!-- script src="js/plotly-2.1.0.min.js"></script -->
+        <script src="js/plotly-2.24.1.min.js"></script>
         <script src="js/fast-stats.js"></script>
         <script src="js/readers.js"></script>
         <script src="js/sfunc.js"></script>
@@ -16,7 +17,7 @@
              overflow: scroll;
              border: 1px solid black;
              width: 600px;
-             height: 300px;
+             height: 400px;
          }
         </style>
         <title>Regelkarte XBar-R</title>
@@ -27,16 +28,7 @@
             Einfaches Histogramm
         </p>
         <p>
-            In das Datenfeld zeilenweise die Messwerte in der Form
-            "Messwert" eintragen. Die
-            Chargenkennzeichnung wird genutzt, um die entsprechenden
-            Messwerte zusammen zu fassen. Die Anzahl der Messwerte
-            muss konstant sein. Bei variierender Anzahl wird das
-            Minimum aller Chargen genommen. Bei Chargen, die mehr als
-            das Minimum der Anzahl an Werten haben, werden die
-            zusätzlichen Werte ignoriert. Wem diese Erklärung zu
-            kompliziert ist, sieht zu, dass die Anzahl pro Charge
-            konstant ist.
+            Bullshit
         </p>
         <p>
             <table>
@@ -88,6 +80,13 @@
 
     </body>
     <script>
+     function dnorm_standard(x) {
+         return 1 / Math.sqrt(2 * Math.PI) * Math.exp(-0.5 * Math.pow(x, 2));
+     }
+     function dnorm(x, mean=0, sd = 1){
+         return 1/sd*dnorm_standard((x-mean)/sd)
+     }
+     
      function makeDiag(){
          let sampleData = [];
          let title = document.getElementById('title').value;
@@ -103,12 +102,22 @@
          }
          console.log(title);
          let stats = readValues(document.getElementById('tdata').value);
+         let dtMin = stats.range()[0];
+         let dtMax = stats.range()[1];
+         let dtN   = stats.length;
+         // https://www.statisticshowto.com/choose-bin-sizes-statistics/
+         let KSturges = Math.ceil( (1+3.322 * Math.log10( dtN )));
+         let KRice = Math.ceil( Math.pow(dtN, 1./3)*2);
+         let nBins = KRice;
+         console.log("N     :"+ dtN);
+         console.log("nBins :"+ nBins);
          console.log("Mean  :"+stats.amean());
          console.log("Stddev:"+stats.stddev());
          console.log("Median:"+stats.median());
          console.log("Range :"+stats.range());
          mu = stats.amean();
          sigma = stats.stddev();
+
 
          let Cp = (USL-LSL)/6./sigma;
          let Cpk= Math.min(USL-mu, mu-LSL)/3.0/sigma;
@@ -123,6 +132,7 @@
 
          let xmin = Math.min(0.5*(LSL+USL)-0.55*(USL-LSL), stats.amean()-3.5*stats.stddev());
          let xmax = Math.max(0.5*(LSL+USL)+0.55*(USL-LSL), stats.amean()+3.5*stats.stddev());
+         console.log(xmin, ' ', xmax);
          console.log(0.5*(LSL+USL)-1.1*(USL-LSL));
          console.log((LSL+USL));
          console.log(USL);
@@ -143,9 +153,33 @@
              yaxis: 'y',
              showlegend: false,
              type: 'histogram',
-             nbinsx: 10,
+             //histnorm: 'probability density',
+             //nbinsx: nBins,
+             xbins: {
+                 start: dtMin,
+                 size: (dtMax-dtMin)/nBins,
+                 end: dtMax+1.e-9,
+             },
          };
          var data = [trace];
+         let xGauss = [];
+         let yGauss = [];
+         let gaussMin = stats.amean()-4.*stats.stddev();
+         let gaussMax = stats.amean()+4.*stats.stddev();
+         for(let i=0; i<100; i++){
+             let value = gaussMin + i/100.*(gaussMax-gaussMin)
+             xGauss.push(value);
+             yGauss.push(dnorm(value, stats.amean(), stats.stddev())*((dtMax-dtMin)/nBins)*dtN );
+         }
+         {
+             let trace2 = {
+                 mode : 'lines',
+                 showlegend: false,
+                 x    : xGauss,
+                 y    : yGauss,
+             }
+             data.push(trace2);
+         }
          if( LSL !== ''){
              let trace2 = {
                  x    : [LSL, LSL],
@@ -178,18 +212,17 @@
                  'domain': [0.0, 0.94],
                  'range' : [xmin, xmax],
              },
-             'yaxis': {
-                 'anchor': 'x',
-                 'domain': [0.0, 1.0],
-             },
-             'yaxis2': {'anchor': 'x',
-                        'fixedrange': true,
-                        'overlaying': 'y',
-                        'range': [0, 1],
-                        'side': 'right',
-                        'visible': false
-             },
-
+                'yaxis': {
+                'anchor': 'x',
+                'domain': [0.0, 1.0],
+                },
+                'yaxis2': {'anchor': 'x',
+                'fixedrange': true,
+                'overlaying': 'y',
+                'range': [0, 1],
+                'side': 'right',
+                'visible': false
+                },
          };
          //console.log(SL);
          Plotly.newPlot('myDiv', data, layout);
