@@ -159,9 +159,9 @@
          //document.getElementById('tdata').value = text;
          let data = readValues(document.getElementById('tdata').value);
          let SpL = (document.getElementById('iusl').value === '')
-             ||(document.getElementById('ilsl').value === '') ?
-               []
-             : [ Number(document.getElementById('ilsl').value), Number(document.getElementById('iusl').value) ];
+                 ||(document.getElementById('ilsl').value === '') ?
+                   []
+                 : [ Number(document.getElementById('ilsl').value), Number(document.getElementById('iusl').value) ];
          console.log(SpL);
 
          let SpLvl =     [ Number(document.getElementById('ilsl').value), Number(document.getElementById('iusl').value) ];
@@ -186,7 +186,7 @@
          c1.innerHTML = 'UCL';  c2.innerHTML = sprintf('%8.4f',IMR_Result.UCL_I);
 
          row=table.insertRow(-1); c1 = row.insertCell(-1); c2 = row.insertCell(-1);
-         c1.innerHTML = 'IBar';  c2.innerHTML = sprintf('%8.4f +- %8.4f',IMR_Result.IBar, IMR_Result.UCL_I-IMR_Result.IBar);
+         c1.innerHTML = 'IBar';  c2.innerHTML = sprintf('%8.4f ± %8.4f',IMR_Result.IBar, IMR_Result.UCL_I-IMR_Result.IBar);
 
          row=table.insertRow(-1); c1 = row.insertCell(-1); c2 = row.insertCell(-1);
          c1.innerHTML = 'LCL';  c2.innerHTML = sprintf('%8.4f',IMR_Result.LCL_I);
