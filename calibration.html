@@ -4,7 +4,6 @@
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
         <link href="css/pms.css" rel="stylesheet" type="text/css" />
         <script src="js/plotly-2.1.0.min.js"></script>
-        <!-- script src="../js/fast-stats.js"></script -->
         <script src="js/sfunc.js"></script>
         <script src="js/sprintf.js"></script>
         <script src="js/readers.js"></script>
@@ -102,16 +101,21 @@
          let reg = linearRegression(sampleData[0], sampleData[1]);
          // from: https://www.real-statistics.com/regression/regression-analysis/
          let xMean = reg.sX/reg.n;
-         let ss_T= reg.sY2 - reg.sY*reg.sY/reg.n;
-         let ss_Res = ss_T*(1-reg.r*reg.r);
-         let ss_Reg = ss_T-ss_Res;
+         let ssT= reg.sY2 - reg.sY*reg.sY/reg.n;
+         let ssRes = ssT*(1-reg.r*reg.r);
+         let ssReg = ssT-ssRes;
+         let sRes  = Math.sqrt(ssRes/(reg.n-2));
+         let ssX   = reg.sX2-reg.sX*reg.sX/reg.n;
 
-         console.log(ss_T, ss_Reg, ss_Res);
-         let sRes = Math.sqrt(ss_Res/(reg.n-2));
+         let seB0  = sRes*Math.sqrt(1/reg.n+xMean*xMean/ssX);
+         let seB1  = sRes/Math.sqrt(ssX);
+         let tCrit = tdistr(reg.n-2, 0.025);
+
+         console.log("ssT: %f, ssReg: %f, ssRes: %f", ssT, ssReg, ssRes);
+         console.log("seB0: %f seB1: %f", seB0, seB1)
          // stderror for normalized residuals of
          // https://statologie.de/standardisierte-residuen-excel/
-         console.log(sRes);
-         let ssX= reg.sX2-reg.sX*reg.sX/reg.n;
+         console.log("s_Res : %f", sRes);
 
          let x1 = Math.min(...sampleData[0]);
          let x2 = Math.max(...sampleData[0]);
@@ -168,7 +172,6 @@
              });
          }
          // Plot regression line
-         console.log( sprintf("%.4fx+%.4f", reg.b, reg.a) );
          plData.push({
              x: [xL, xH],
              y: [xL*reg.b + reg.a, xH*reg.b + reg.a],
@@ -186,7 +189,7 @@
          let ciH = [];
          let predL = [];
          let predH = [];
-         let tCrit = tdistr(reg.n-2, 0.025)
+
          for(let i=0; i<=20; i++){
              let x0 = xRange[i];
              let yd = reg.a+reg.b*x0;
@@ -202,8 +205,6 @@
          }
          /** KILLME **/
          // https://stats.stackexchange.com/questions/342632/how-to-understand-se-of-regression-slope-equation
-         let SE_b1 = Math.sqrt((reg.sY2 - reg.sY*reg.sY/reg.n)/(reg.sX2 - reg.sX*reg.sX/reg.n)/(reg.n-2));
-         console.log("SE_b1", SE_b1);
          let confSE1 = sRes*Math.sqrt(1/reg.n + (x1-xMean)*(x1-xMean)/ssX);
          let confSE2 = sRes*Math.sqrt(1/reg.n + (x2-xMean)*(x2-xMean)/ssX);
          console.log(confSE1*tCrit, confSE2*tCrit);
@@ -273,8 +274,8 @@
          Plotly.newPlot('myDiv', plData,  layout, {editable: true, responsive: true},);
          document.getElementById('resN').innerHTML = reg.n;
          document.getElementById('resR2').innerHTML = reg.r*reg.r;
-         document.getElementById('resA').innerHTML =  reg.a;
-         document.getElementById('resB').innerHTML = sprintf("%.4f, [%.4f, %.4f]", reg.b, reg.b-SE_b1, reg.b+SE_b1);
+         document.getElementById('resA').innerHTML = sprintf("%.4f, [%.4f, %.4f]", reg.a, reg.a-seB0*tCrit, reg.a+seB0*tCrit);
+         document.getElementById('resB').innerHTML = sprintf("%.4f, [%.4f, %.4f]", reg.b, reg.b-seB1*tCrit, reg.b+seB1*tCrit);
          document.getElementById('resSE').innerHTML = sRes;
      }
      function cHWChange(){
@@ -288,18 +289,18 @@
 <!--
      // https://statologie.de/standardisierte-residuen-excel/
      /*
-     8;41
-     12;42
-     12;39
-     13;37
-     14;35
-     16;39
-     17;45
-     22;46
-     24;39
-     26;49
-     29;55
-     30;57
+     8	41
+     12	42
+     12	39
+     13	37
+     14	35
+     16	39
+     17	45
+     22	46
+     24	39
+     26	49
+     29	55
+     30	57
 
      Set 2
      0	125
@@ -327,5 +328,5 @@
      4;92
      23;65
      StdError for a and b
-     https://stats.stackexchange.com/questions/289457/proof-for-the-standard-error-of-parameters-in-linear-regression     
+     https://stats.stackexchange.com/questions/289457/proof-for-the-standard-error-of-parameters-in-linear-regression
 -->
