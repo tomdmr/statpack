@@ -32,7 +32,9 @@
             Daten müssen in geordneten Paaren für das gleiche Sample
             vorliegen, getrennt durch Tab oder ";"
         </p>
-
+        <p>
+            Vorzeichenregelung: Es wird die vordere Spalte von der hinteren abgezogen. Negativer Bias bedeutet also, dass die vordere Methode im Mittel größere Ergebnisse erzielt.
+        </p>
         <table>
             <tr>
                 <td>Titel</td><td><input type="text" id="title" value="" /></td>
@@ -150,10 +152,13 @@
              let Shapes = [Bias, lLOA, uLOA];
              let layout = {
                  title: myTitle,
-                 xaxis: {},
-                 yaxis: {
-                     zeroline: false,
+                 xaxis: {
+                     title: {text: document.getElementById('xtitle').value},
                  },
+                 yaxis: {
+                     title: {text: document.getElementById('ytitle').value},
+                 },
+                 zeroline: false,
                  shapes: Shapes,
                  annotations: [
                      {
