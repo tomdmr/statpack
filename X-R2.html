@@ -54,8 +54,7 @@
                 <tr>
                     <td>Daten</td>
                     <td>
-                        <textarea id="tdata" rows="8" cols="60">
-                        </textarea>
+                        <textarea id="tdata" rows="8" cols="60"></textarea>
                     </td>
                 </tr>
                 <tr>
@@ -117,37 +116,51 @@
          let Maxi  = [];
          let M = data[0].s.length-1;
          let N = data.length;
+         let nSamples = 0;
          console.log('M: '+ M);
          console.log('N: '+ N);
          data.forEach(function(prod, idx){
-             let xmin =  1e9;
-             let xmax = -1e9;
-             let XjBar= 0.0;
-             let localM = prod.s.length-1;
-             prod.s.data.forEach(function(measure, jdx){
-                 if(jdx){
-                     if(measure > xmax) xmax = measure;
-                     if(measure < xmin) xmin = measure;
-                     XBar  += measure;
-                     XjBar += measure
-                 }
-             });
-             RBar += xmax - xmin;
-             Ri[idx] = xmax - xmin;
-             XiBar[idx] = XjBar / M; // M
-             Mini[idx] = XiBar[idx]-xmin;
-             Maxi[idx] = xmax-XiBar[idx];
+             if(0){
+                 let xmin =  1e9;
+                 let xmax = -1e9;
+                 let XjBar= 0.0;
+                 let localM = prod.s.length-1;
+                 prod.s.data.forEach(function(measure, jdx){
+                     if(jdx){
+                         if(measure > xmax) xmax = measure;
+                         if(measure < xmin) xmin = measure;
+                         XBar  += measure;
+                         XjBar += measure
+                     }
+                 });
+                 RBar += xmax - xmin;
+                 Ri[idx] = xmax - xmin;
+                 XiBar[idx] = XjBar / M; // M
+                 Mini[idx] = XiBar[idx]-xmin;
+                 Maxi[idx] = xmax-XiBar[idx];
+             }
+             else{
+                 XBar     += prod.s.amean();
+                 nSamples += prod.s.length;
+                 Ri[idx] = prod.s.max - prod.s.min;
+                 RBar += Ri[idx];
+                 XiBar[idx] = prod.s.amean();
+
+                 Mini[idx]  = XiBar[idx] - prod.s.min;
+                 Maxi[idx]  = prod.s.max - XiBar[idx];
+             }
          });
-         XBar /= (M*N);
+         //XBar /= (M*N);
+         XBar  /= N;
          RBar /= N;
          let UCL = XBar + A2[M-2]*RBar;
          let LCL = XBar - A2[M-2]*RBar;
          let UCLR =  D4[M-2]*RBar;
          let LCLR =  D3[M-2]*RBar;
-         console.log('XBar:' +  XBar);
+         console.log('XBar:', XBar, ' M: ', M);
          return {
              'XBar': XBar, 'RBar': RBar, 'UCL': UCL, 'LCL': LCL, 'UCLR': UCLR, 'LCLR': LCLR, 'XiBar': XiBar, 'Ri': Ri,
-             'Mini' : Mini, 'Maxi': Maxi,
+             'Mini' : Mini, 'Maxi': Maxi, 'M':M,
          };
      }
 
@@ -163,8 +176,13 @@
          c1.innerHTML = 'N';  c2.innerHTML = data.length;
 
          row=table.insertRow(-1); c1 = row.insertCell(-1); c2 = row.insertCell(-1);
+         c1.innerHTML = 'M';
+         c2.innerHTML = XMR_Result.M;
+
+         row=table.insertRow(-1); c1 = row.insertCell(-1); c2 = row.insertCell(-1);
          c1.innerHTML = 'Xbar';
          c2.innerHTML = sprintf('%8.4f +- %8.4f',XMR_Result.XBar, XMR_Result.UCL -XMR_Result.XBar);
+
          row=table.insertRow(-1); c1 = row.insertCell(-1); c2 = row.insertCell(-1);
          c1.innerHTML = 'Batch Range';
          c2.innerHTML = sprintf('%8.4f < %8.4f < %8.4f', XMR_Result.LCLR, XMR_Result.RBar, XMR_Result.UCLR);
@@ -280,6 +298,22 @@
              yaxis: 'y2',
          }
          var plData = [Data,Viol, CL,Centre, MRMR, MRCL]
+         if( SL.length ){
+             plData.push({
+                 type: 'scatter',
+                 x: [0.5, data.length, null, 0.5, data.length],
+                 y: [SL[0], SL[0], null, SL[1], SL[1]],
+                 mode: 'lines',
+                 name: 'LSL/USL',
+                 showlegend: true,
+                 line: {
+                     color: 'red',
+                     width: 2,
+                     //dash: 'dash'
+                 }
+             }
+             );
+         }
          var layout = {
              title: myTitle,
              grid: {rows: 2, columns: 1,},
@@ -301,41 +335,53 @@
          let LSL   = document.getElementById('ilsl').value;
          let USL   = document.getElementById('iusl').value;
          if((USL ==='') || (LSL==='')){
-             console.log('No usl');
              SL = []
          }
          else{
              SL = [Number(USL), Number(LSL)];
          }
-         console.log(title);
          let recLength = Number(document.getElementById('recLength').value);
+         //
+         let rawData = readKeyValues( document.getElementById('tdata').value );
+         let minSet = 1024;
+         let minSize = 0;
          if(document.getElementById('doFilter').checked && recLength > 0){
-             let rawData = readKeyValues( document.getElementById('tdata').value );
+             console.log('Filterzweig');
+             minSize = recLength
+             /*
              rawData.forEach(function(item){
-                 if(item.s.length == recLength){
-                     sampleData.push(item);
-                 }
+                 //console.log(item.name)
+                 if( (item.s.length >= minSize) && (item.s.length<minSet)) minSet = item.s.length;
+                 //console.log(item.s.data);
              });
-         }else{
-             let rawData = readKeyValues( document.getElementById('tdata').value );
+             */
+             //console.log(minSet);
              rawData.forEach(function(item){
-                 if(item.s.length > 2){
-                     sampleData.push(item);
+                 if(item.s.length >= minSize){
+                     let foo = item.s.data.sample(minSet);
+                     sampleData.push({
+                         key: item.name,
+                         s  : new Stats({sampling: true}).push(foo)
+                     });
                  }
              });
          }
-         /*
-          */
-         console.log(sampleData);
+         else{
+             console.log('Nicht Filterzweig');
+             sampleData = rawData;
+         }
+         //
+         //
+         //console.log(sampleData);
          let MMin=1e9;
          sampleData.forEach(function(sample){
              if(sample.s.length<MMin) MMin = sample.s.length;
          });
-         console.log(MMin);
+         console.log('MMin: ', MMin);
          if(MMin > 30) MMin = 30;
-         /*
-            sampleData.forEach(function(sample){ sample.length=MMin; });
-          */
+         //
+         //   sampleData.forEach(function(sample){ sample.length=MMin; });
+         //
          console.log(sampleData);
          let SpL = (document.getElementById('iusl').value === '')
                  ||(document.getElementById('ilsl').value === '') ?
