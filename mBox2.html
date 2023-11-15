@@ -35,6 +35,12 @@
                 <td>Einheit y:</td><td><input type="text" id="ytitle" value="" /></td>
             </tr>
             <tr>
+                <td>USL:</td><td><input type="number" id="iusl" /></td>
+            </tr>
+            <tr>
+                <td>LSL:</td><td><input type="number" id="ilsl" /></td>
+            </tr>
+            <tr>
                 <td>Daten</td>
                 <td>
                     <textarea id="tdata" rows="8" cols="60"></textarea>
@@ -100,7 +106,7 @@
 
          let t = Math.abs((X1-X2)/Math.sqrt(sig1*sig1/N1 + sig2*sig2/N2));
          let df = (sig1**2 / N1 + sig2**2/N2)**2/( (sig1**2/N1)**2/(N1-1) + (sig2**2/N2)**2/(N2-1) );
-         console.log('t: '+t+', df: '+df);
+         //console.log('t: '+t+', df: '+df);
          return (2.*(1.0-t_Dist(t, df)));
      }
      function makeDiag(){
@@ -111,12 +117,18 @@
              item.boxpoints = 'suspectedoutliers';
              item.showlegend = false;
          });
-         console.log(sampleData);
+         //console.log(sampleData);
+         let SpLvl =     [
+             (document.getElementById('iusl').value === '')? null : Number(document.getElementById('iusl').value),
+             (document.getElementById('ilsl').value === '')? null : Number(document.getElementById('ilsl').value)];
+         
+         console.log(SpLvl);
          let layout = {};
          layout.title = title;
          /* FIXME: Does not work */
          layout.xaxis= { title: {text: document.getElementById('xtitle').value}, }
          layout.yaxis= { title: {text: document.getElementById('ytitle').value}, }
+         layout.xaxis2 = {overlaying: 'x', range: [0,1], showticklabels: false};
          let yMin = document.getElementById('yMin').value;
          let yMax = document.getElementById('yMax').value;
          if( (yMin !=="") && (yMax !== "") ){
@@ -159,7 +171,7 @@
                  }
              }
          }
-         console.log(sig);
+         //console.log(sig);
          for(i=0; i<sampleData.length; i++){
              // Neue Zeile
              let row = table.insertRow(-1);
@@ -179,6 +191,38 @@
              }
          }
 
+         if (document.getElementById('ilsl').value !== ''){
+             let y = Number(document.getElementById('ilsl').value);
+             sampleData.push({
+                 type: 'scatter',
+                 x: [0, 2],
+                 y: [y, y],
+                 xaxis: 'x2',
+                 mode: 'lines',
+                 showlegend: false,
+                 line: {
+                     color: 'red',
+                     width: 2,
+                     dash: 'dash'
+                 }
+             });
+         }
+         if (document.getElementById('iusl').value !== ''){
+             let y = Number(document.getElementById('iusl').value);
+             sampleData.push({
+                 type: 'scatter',
+                 x: [0, 2],
+                 y: [y, y],
+                 xaxis: 'x2',
+                 mode: 'lines',
+                 showlegend: false,
+                 line: {
+                     color: 'red',
+                     width: 2,
+                     dash: 'dash'
+                 }
+             });
+         }
          Plotly.newPlot('myDiv', sampleData, layout,  {editable: true, responsive: true},);
      }
      function cHWChange(){
