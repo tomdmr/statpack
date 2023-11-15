@@ -1,0 +1,182 @@
+<!doctype html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+        <!-- link href="css/pms.css" rel="stylesheet" type="text/css" /  -->
+        <script src="js/plotly-2.24.1.min.js"></script>
+        <!-- script src="js/fast-stats.js"></script -->
+        <!-- script src="js/sfunc.js"></script -->
+        <!-- script src="js/sprintf.js"></script -->
+        <!-- script src="js/readers.js"></script -->
+        <!-- script src="js/d3.v7.min.js"></script  -->
+        <title>Dashboard, beta Version</title>
+        <style>
+         .resizable {
+             resize: both;
+             /*
+                overflow: scroll;
+                border: 1px solid black;
+              */
+             width: 600px;
+             height: 300px;
+         }
+        </style>
+    </head>
+    <body>
+        <h1>Dashboard Cagliata, beta-Version</h1>
+        Aus GQMS-Bericht von den interessierenden Chargen die Spalten
+        von Charge bis EW markieren, kopieren und in das Datenfeld einfügen. Dann
+        "Make" drücken
+        <table>
+            <tr>
+                <td>Daten</td>
+                <td>
+                    <textarea id="tdata" rows="8" cols="135"></textarea>
+                </td>
+            </tr>
+            <tr>
+                <td><button onclick="makeDiag()">Make</button></td>
+                <td><button onclick="makeImg('myDiv', 'jpg-export')">Copy</button></td>
+            </tr>
+        </table>
+        <table>
+            <tr>
+                <td><div id="pHnT" class="resizable" onresize="doResize(this)"></div></td>
+                <td><div id="TS" class="resizable" onresize="doResize(this)"></div></td>
+                <td><div id="FiTr" class="resizable" onresize="doResize(this)"></div></td>
+            </tr>
+            <tr>
+                <td><div id="Salz" class="resizable" onresize="doResize(this)"></div></td>
+                <td><div id="Fett" class="resizable" onresize="doResize(this)"></div></td>
+                <td><div id="Prot" class="resizable" onresize="doResize(this)"></div></td>
+            </tr>
+        </table>
+    </body>
+    <script>
+     let rawData = {
+         'chNummer1': {
+             '1': {pHNT: 4.56},
+             '2': {pHNT: 6.21}
+         }
+     }
+     /*
+        { charge: 'chNummer',
+        data:
+        [
+        { kf: 1, phnt: 5.43, TS: 55, FiTr: 45.0, salz: 0.6, Fett: 21.0, P: 27.5 },
+        { kf: 2, phnt: 5.43, TS: 55, FiTr: 45.0, salz: 0.6, Fett: 21.0, P: 27.5 },
+        { kf: 3, phnt: 5.43, TS: 55, FiTr: 45.0, salz: 0.6, Fett: 21.0, P: 27.5 },
+        ]
+        }
+        };
+      */
+     function addLimits(sampleData, limits){
+         limits.forEach(function(limit){
+             sampleData.push({
+                 type: 'scatter',
+                 x: [0, 2],
+                 y: [limit, limit],
+                 xaxis: 'x2',
+                 mode: 'lines',
+                 showlegend: false,
+                 line: {
+                     color: 'red',
+                     width: 2,
+                     dash: 'dash'
+                 }
+             });
+         });
+         return sampleData;
+     }
+     function demoReader(inText){
+         let sampleData = {}
+         inText.trim().split('\n').
+                forEach(function(line){
+                    let key= ''
+                    let values = [];
+                    if (line ==='') return;
+                    let fields = line.trim().split(/[\t;]/);
+                    key = 'C'+(fields.shift()-0);
+                    kf  = fields.shift();
+                    if (!(key in sampleData)) sampleData[key] = {};
+                    if (!(kf in sampleData[key])) sampleData[key][kf]= {}
+                    if ( (fields.length >3)&& fields[3] !=='')
+                        sampleData[key][kf].pHnT = parseFloat((fields[3].replace(',', '.')));
+                    if( fields.length > 11){
+                        if(fields[ 5] !=='') sampleData[key][kf].TS   = parseFloat((fields[ 5].replace(',', '.')));
+                        if(fields[ 6] !=='') sampleData[key][kf].Fett = parseFloat((fields[ 6].replace(',', '.')));
+                        if(fields[ 7] !=='') sampleData[key][kf].FiTr = parseFloat((fields[ 7].replace(',', '.')));
+                        if(fields[ 8] !=='') sampleData[key][kf].Salz = parseFloat((fields[ 8].replace(',', '.')));
+                        if(fields[11] !=='') sampleData[key][kf].Prot = parseFloat((fields[11].replace(',', '.')));
+                    }
+                    //sampleData[key][
+                });
+         console.log(sampleData);
+         return sampleData;
+     }
+
+     function makeDiag(){
+         let plotData = [];
+         sampleData = demoReader( document.getElementById('tdata').value );
+         let sections = [
+             {
+                 title: 'pH nach Turm',
+                 div: 'pHnT',
+                 limits: [5.55, 5.85],
+             },
+             {
+                 title: 'TS',
+                 div: 'TS',
+                 limits: [55],
+             },
+             {
+                 title: 'Fett in TS',
+                 div: 'FiTr',
+                 limits: [45],
+             },
+             {
+                 title: 'Salz',
+                 div: 'Salz',
+                 limits: [0.5, 0.8],
+             },
+             {
+                 title: 'Fett',
+                 div: 'Fett',
+                 limits: [26],
+             },
+             {
+                 title: 'Protein',
+                 div: 'Prot',
+                 limits: [],
+             },
+         ];
+         // Loop over sections
+         sections.forEach(function(section){
+             let layout = [];
+             let plotData = [];
+             layout.title = section.title;
+             
+             layout.xaxis2 = {overlaying: 'x', range: [0,1], showticklabels: false};
+             Object.keys(sampleData).forEach(function(key){
+                 console.log(key);
+                 let data   = [];
+                 Object.keys(sampleData[key]).forEach(function(kf){
+                     let ds = sampleData[key][kf];
+                     if( section.div in ds) data.push(ds[section.div]);
+                 });
+                 console.log(data);
+                 plotData.push({
+                     type: 'box',
+                     boxpoints : 'suspectedoutliers',
+                     boxmean   : 'sd',
+                     showlegend: false,
+                     y         : data,
+                     name      : key,
+                 });
+             });
+             plotData = addLimits(plotData, section.limits);
+             Plotly.newPlot(section.div, plotData, layout,  {editable: true, responsive: true})
+         });
+     }
+    </script>
+</html>

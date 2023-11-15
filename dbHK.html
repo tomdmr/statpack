@@ -1,0 +1,339 @@
+<!doctype html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+        <!-- link href="css/pms.css" rel="stylesheet" type="text/css" / -->
+        <script src="js/plotly-2.24.1.min.js"></script>
+        <!-- script src="js/fast-stats.js"></script -->
+        <!-- script src="js/sfunc.js"></script -->
+        <!-- script src="js/sprintf.js"></script -->
+        <script src="js/readers.js"></script>
+        <script src="js/d3.v7.min.js"></script>
+        <title>Dashboard, beta Version</title>
+        <style>
+         .resizable {
+             resize: both;
+             /*
+                overflow: scroll;
+                border: 1px solid black;
+              */
+             width: 600px;
+             height: 300px;
+         }
+        </style>
+    </head>
+    <body onload="initBody()">
+        <h1>Dashboard Hartkäserei, beta-Version</h1>
+        Aus GQMS-Bericht von den interessierenden Chargen die Spalten
+        von Charge bis EW markieren, kopieren und in das Datenfeld einfügen. Dann
+        "Make" drücken
+        <table>
+            <thead>
+                <tr>
+                    <th></th>
+                    <th>Min</th>
+                    <th>Max</th>
+                    <th>Data</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <th scope="row"> pH</th>
+                    <td><input type="number" id="pHMin" /> </td>
+                    <td><input type="number" id="pHMax" /></td>
+                    <td rowspan=6><textarea id="tdata" rows="10" cols="135"></textarea></td>
+                </tr>
+                <tr>
+                    <th scope="row"> TS</th>
+                    <td><input type="number" id="TSMin" /> </td>
+                    <td><input type="number" id="TSMax" /></td>
+                </tr>
+                <tr>
+                    <th scope="row"> FiTr</th>
+                    <td><input type="number" id="FiTrMin" /> </td>
+                    <td><input type="number" id="FiTrMax" /></td>
+                </tr>
+                <tr>
+                    <th scope="row">Salz</th>
+                    <td><input type="number" id="SalzMin" /> </td>
+                    <td><input type="number" id="SalzMax" /></td>
+                </tr>
+                <tr>
+                    <th scope="row">Fett</th>
+                    <td><input type="number" id="FettMin" /> </td>
+                    <td><input type="number" id="FettMax" /></td>
+                </tr>
+                <tr>
+                    <th scope="row">Protein</th>
+                    <td><input type="number" id="ProtMin" /> </td>
+                    <td><input type="number" id="ProtMax" /></td>
+                </tr>
+                <tr>
+                    <th scope="row"></th>
+                    <td><button onclick="makeDiag()">Make</button></td>
+                    <td><button onclick="makeImg('pH', 'jpg-export')">Copy</button></td>
+                    <td>
+                        <select id="HF" onchange="hfChanged(this)">
+                        </select>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        <div id="allPlotDiv">
+            <center><h2 id="h2AllPlotDiv"></h2></center>
+            <table>
+                <tr>
+                    <td><div id="pHDiv" class="resizable" onresize="doResize(this)"></div></td>
+                    <td><div id="TSDiv" class="resizable" onresize="doResize(this)"></div></td>
+                    <td><div id="FiTrDiv" class="resizable" onresize="doResize(this)"></div></td>
+                </tr>
+                <tr>
+                    <td><div id="SalzDiv" class="resizable" onresize="doResize(this)"></div></td>
+                    <td><div id="FettDiv" class="resizable" onresize="doResize(this)"></div></td>
+                    <td><div id="ProtDiv" class="resizable" onresize="doResize(this)"></div></td>
+                </tr>
+            </table>
+        </div>
+        <center><h2 id="h2AllPlotExport">Überschrift</h2></center>
+
+        <img id="pHImg"></img>
+        <img id="TSImg"></img>
+        <img id="FiTrImg"></img>
+        <img id="SalzImg"></img>
+        <img id="FettImg"></img>
+        <img id="ProtImg"></img>
+        <script>
+         /**
+          * This should come from somewhere else, but how?
+          */
+         let specRanges = [
+             {
+                 'HF' : '',
+                 'pH'  : ['',''],
+                 'TS'  : ['', ''],
+                 'FiTr': ['',''],
+                 'Salz': ['',''],
+                 'Fett': ['',''],
+                 'Prot': ['','']
+             },
+             {
+                 'HF'  : 'HF Cheddar 50% (Fromase) 20kg',
+                 'pH'  : ['5.1','5.5'], //5.1-5.3
+                 'TS'  : [60,63],
+                 'FiTr': [50,53],
+                 'Salz': ['',''],
+                 'Fett': ['',''],
+                 'Prot': ['','']
+             },
+             {
+                 'HF'  : 'HF Reibekäse 40% (Fromase) 20kg – 60 % TM',
+                 'pH'  : [5.25,5.55],
+                 'TS'  : [60, 63],
+                 'FiTr': [40,43],
+                 'Salz': ['',''],
+                 'Fett': ['',''],
+                 'Prot': ['','']
+             },
+             {
+                 'HF': 'HF Cheddar 50% TM 63% - Salz 1,4-1,8%',
+                 'pH'  : ['5.1','5.5'], //5.1-5.3
+                 'TS'  : [62,66],
+                 'FiTr': [50,53],
+                 'Salz': [1.4,1.8],
+                 'Fett': ['',''],
+                 'Prot': ['','']
+             },
+             {
+                 'HF': 'HF Cheddar 50% TM 63% - Salz 1,6-2,0% oGT VLOG',
+                 // Oder:
+                 // 'HF': [1234, 'HF Cheddar 50% TM 63% - Salz 1,6-2,0% oGT VLOG'']
+                 'pH'  : ['5.1','5.5'], //5.1-5.3
+                 'TS'  : [62,64],
+                 'FiTr': [50,53],
+                 'Salz': [1.6, 2.0],
+                 'Fett': ['',''],
+                 'Prot': ['','']
+             },
+             {
+                 'HF': 'HF Cheddar 50% TM 63% - Salz 1,6-2,0% oGT VLOG',
+                 // Oder:
+                 // 'HF': [1234, 'HF Cheddar 50% TM 63% - Salz 1,6-2,0% oGT VLOG'']
+                 'pH'  : ['5.1','5.5'], //5.1-5.3
+                 'TS'  : [62,64],
+                 'FiTr': [50,53],
+                 'Salz': [1.6, 2.0],
+                 'Fett': ['',''],
+                 'Prot': ['','']
+             }
+
+         ];
+         let sections = [
+
+             {
+                 name : 'pH', // Switch to 'pH nach Turm' for Cagliata types
+                 title: 'pH',
+                 div: 'pHDiv',
+             },
+             {
+                 name: 'TS',
+                 title: 'TS',
+                 div: 'TSDiv',
+             },
+             {
+                 name : 'FiTr',
+                 title: 'Fett in TS',
+                 div: 'FiTrDiv',
+             },
+             {
+                 name : 'Salz',
+                 title: 'Salz',
+                 div: 'SalzDiv',
+             },
+             {
+                 name : 'Fett',
+                 title: 'Fett',
+                 div: 'FettDiv',
+             },
+             {
+                 name : 'Prot',
+                 title: 'Protein',
+                 div: 'ProtDiv',
+             },
+         ];
+
+         function initBody(){
+             let sel = document.getElementById('HF');
+             specRanges.forEach(function(item,i){
+                 let opt = document.createElement('option');
+                 //console.log(i);
+                 opt.value = i;
+                 opt.innerHTML = item.HF;
+                 sel.appendChild(opt);
+             })
+         }
+         /**
+          * React on changes of HF selector:
+          * copy all min/max to GUI
+          */
+         function hfChanged(sel){
+             let opt = sel.value;
+             let selOpt = sel.selectedOptions;
+             console.log(selOpt[0].label);
+             ranges = specRanges[opt];
+             document.getElementById("h2AllPlotDiv").innerHTML = selOpt[0].label;
+             document.getElementById("h2AllPlotExport").innerHTML = selOpt[0].label;
+
+             Object.keys(specRanges[opt]).forEach(function(key){
+                 if( key === 'HF') return;
+                 let range = ranges[key];
+                 document.getElementById(key+'Min').value = range[0];
+                 document.getElementById(key+'Max').value = range[1];
+             });
+         }
+         /**
+          *
+          */
+         function addLimits(sampleData, limits){
+             limits.forEach(function(limit){
+                 sampleData.push({
+                     type: 'scatter',
+                     x: [0, 2],
+                     y: [limit, limit],
+                     xaxis: 'x2',
+                     mode: 'lines',
+                     showlegend: false,
+                     line: {
+                         color: 'red',
+                         width: 2,
+                         dash: 'dash'
+                     }
+                 });
+             });
+             return sampleData;
+         }
+
+         function makeDiag(){
+             let plotData = [];
+             sampleData = dashboardHKReader( document.getElementById('tdata').value );
+             // Loop over sections
+             sections.forEach(function(section){
+                 let layout = [];
+                 let plotData = [];
+                 layout.title = section.title;
+                 layout.xaxis = { type: 'category'};
+                 layout.xaxis2 = {overlaying: 'x', range: [0,1], showticklabels: false};
+                 Object.keys(sampleData).forEach(function(key){
+                     //console.log(key);
+                     let data   = [];
+                     Object.keys(sampleData[key]).forEach(function(kf){
+                         let ds = sampleData[key][kf];
+                         if( section.name in ds) data.push(ds[section.name]);
+                     });
+                     plotData.push({
+                         type: 'box',
+                         boxpoints : 'suspectedoutliers',
+                         boxmean   : 'sd',
+                         showlegend: false,
+                         y         : data,
+                         name      : key,
+                     });
+                 });
+                 let range = [];
+                 let lsl = document.getElementById(section.name+'Min');
+                 let usl = document.getElementById(section.name+'Max');
+                 if (lsl.value !== '') range.push(lsl.value);
+                 if (usl.value !== '') range.push(usl.value);
+                 plotData = addLimits(plotData, range);
+                 Plotly.newPlot(section.name+'Div', plotData, layout,  {editable: true, responsive: true})
+             });
+             let text = "";
+             Object.keys(sampleData).forEach(function(key){
+                 let charge = sampleData[key];
+                 let kfs    = Object.keys(charge);
+                 if (kfs.includes("1") && kfs.includes("5")){
+                     text += charge["1"].TS + "\t" + charge["5"].TS + "\n";
+                 }
+             })
+             console.log("DATA");
+             console.log(text);
+             const copyContent = async () => {
+                 try {
+                     await navigator.clipboard.writeText(text);
+                     console.log('Content copied to clipboard');
+                 } catch (err) {
+                     console.error('Failed to copy: ', err);
+                 }
+             }                 
+         }
+         async function makeImg(divName, imgName){
+             sections.forEach(function(section){
+                 console.log('SRC:', section.name+'Div');
+                 console.log('DST:', section.name+'Img');
+                 let img = d3.select('#'+section.name+'Img');
+                 let graphDiv = document.getElementById(section.name+'Div');
+                 console.log(img, graphDiv);
+                 let clientHeight = graphDiv.clientHeight;
+                 let clientWidth  = graphDiv.clientWidth;
+                 console.log(clientHeight+ ' ' + clientWidth);
+                 Plotly.toImage(graphDiv, {format: 'png', width: clientWidth, height: clientHeight}).then(function(dataUrl) {
+                     // use the dataUrl
+                     img.attr("src", dataUrl);
+                     //doies not work: copyImage(url);
+                 });
+             });
+             /*
+                let img = d3.select('#'+imgName);
+                let graphDiv = document.getElementById(DivName);
+                let clientHeight = graphDiv.clientHeight;
+                let clientWidth  = graphDiv.clientWidth;
+                console.log(clientHeight+ ' ' + clientWidth);
+                Plotly.toImage(graphDiv, {format: 'png', width: clientWidth, height: clientHeight}).then(function(dataUrl) {
+                // use the dataUrl
+                img.attr("src", dataUrl);
+                //doies not work: copyImage(url);
+                });
+              */
+         }
+        </script>
+    </body>
+</html>
