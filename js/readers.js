@@ -214,13 +214,12 @@ function dashboardHKReader(inText){
                    if(fields[ 7] !=='') sampleData[key][kf].Salz = parseFloat((fields[ 7].replace(',', '.')));
                    if(fields[ 9] !=='') sampleData[key][kf].Prot = parseFloat((fields[ 9].replace(',', '.')));
                }
-               //sampleData[key][
            });
     //console.log(sampleData);
     return sampleData;
 }
 /**
- * Bug: kf kann manchmal auch leer sein. Record muss ignoriert werden.
+ *
  */
 function dashboardCagReader(inText){
     let sampleData = {}
