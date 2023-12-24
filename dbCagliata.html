@@ -41,35 +41,70 @@
         </table>
         <table>
             <tr>
-                <td><div id="pHnT" class="resizable" onresize="doResize(this)"></div></td>
-                <td><div id="TS" class="resizable" onresize="doResize(this)"></div></td>
-                <td><div id="FiTr" class="resizable" onresize="doResize(this)"></div></td>
+                <td><div id="pHDiv" class="resizable" onresize="doResize(this)"></div></td>
+                <td><div id="TSDiv" class="resizable" onresize="doResize(this)"></div></td>
+                <td><div id="FiTrDiv" class="resizable" onresize="doResize(this)"></div></td>
             </tr>
             <tr>
-                <td><div id="Salz" class="resizable" onresize="doResize(this)"></div></td>
-                <td><div id="Fett" class="resizable" onresize="doResize(this)"></div></td>
-                <td><div id="Prot" class="resizable" onresize="doResize(this)"></div></td>
+                <td><div id="SalzDiv" class="resizable" onresize="doResize(this)"></div></td>
+                <td><div id="FettDiv" class="resizable" onresize="doResize(this)"></div></td>
+                <td><div id="ProtDiv" class="resizable" onresize="doResize(this)"></div></td>
             </tr>
         </table>
     </body>
     <script>
-     let rawData = {
-         'chNummer1': {
-             '1': {pHNT: 4.56},
-             '2': {pHNT: 6.21}
-         }
-     }
-     /*
-        { charge: 'chNummer',
-        data:
-        [
-        { kf: 1, phnt: 5.43, TS: 55, FiTr: 45.0, salz: 0.6, Fett: 21.0, P: 27.5 },
-        { kf: 2, phnt: 5.43, TS: 55, FiTr: 45.0, salz: 0.6, Fett: 21.0, P: 27.5 },
-        { kf: 3, phnt: 5.43, TS: 55, FiTr: 45.0, salz: 0.6, Fett: 21.0, P: 27.5 },
-        ]
-        }
-        };
-      */
+     let specRanges = [
+         {
+             'HF' : 'HF Bio Cagliata 45% Dalton DF 15kg',
+             'pH'  : ['5.55','5.85'],
+             'TS'  : ['55', '58'],
+             'FiTr': ['45','48'],
+             'Salz': ['0.5','0.8'],
+             'Fett': ['26','28'],
+             'Prot': ['','']
+         },
+         {
+             'HF' : 'HF Bio Cagliata 45% Dalton DF 15kg',
+             'pH'  : ['',''],
+             'TS'  : ['', ''],
+             'FiTr': ['',''],
+             'Salz': ['',''],
+             'Fett': ['',''],
+             'Prot': ['','']
+         },
+     ];
+     let sections = [
+         {
+             name : 'pH', // Switch to 'pH nach Turm' for Cagliata types
+             title: 'pH nach Turm',
+             div: 'pHDiv',
+         },
+         {
+             name: 'TS',
+             title: 'TS',
+             div: 'TSDiv',
+         },
+         {
+             name : 'FiTr',
+             title: 'Fett in TS',
+             div: 'FiTrDiv',
+         },
+         {
+             name : 'Salz',
+             title: 'Salz',
+             div: 'SalzDiv',
+         },
+         {
+             name : 'Fett',
+             title: 'Fett',
+             div: 'FettDiv',
+         },
+         {
+             name : 'Prot',
+             title: 'Protein',
+             div: 'ProtDiv',
+         },
+     ];
      function addLimits(sampleData, limits){
          limits.forEach(function(limit){
              sampleData.push({
@@ -101,7 +136,7 @@
                     if (!(key in sampleData)) sampleData[key] = {};
                     if (!(kf in sampleData[key])) sampleData[key][kf]= {}
                     if ( (fields.length >3)&& fields[3] !=='')
-                        sampleData[key][kf].pHnT = parseFloat((fields[3].replace(',', '.')));
+                        sampleData[key][kf].pH = parseFloat((fields[3].replace(',', '.')));
                     if( fields.length > 11){
                         if(fields[ 5] !=='') sampleData[key][kf].TS   = parseFloat((fields[ 5].replace(',', '.')));
                         if(fields[ 6] !=='') sampleData[key][kf].Fett = parseFloat((fields[ 6].replace(',', '.')));
@@ -111,60 +146,27 @@
                     }
                     //sampleData[key][
                 });
-         console.log(sampleData);
+         console.log('Ready reading data');
+         //console.log(sampleData);
          return sampleData;
      }
 
      function makeDiag(){
          let plotData = [];
          sampleData = demoReader( document.getElementById('tdata').value );
-         let sections = [
-             {
-                 title: 'pH nach Turm',
-                 div: 'pHnT',
-                 limits: [5.55, 5.85],
-             },
-             {
-                 title: 'TS',
-                 div: 'TS',
-                 limits: [55],
-             },
-             {
-                 title: 'Fett in TS',
-                 div: 'FiTr',
-                 limits: [45],
-             },
-             {
-                 title: 'Salz',
-                 div: 'Salz',
-                 limits: [0.5, 0.8],
-             },
-             {
-                 title: 'Fett',
-                 div: 'Fett',
-                 limits: [26],
-             },
-             {
-                 title: 'Protein',
-                 div: 'Prot',
-                 limits: [],
-             },
-         ];
          // Loop over sections
          sections.forEach(function(section){
              let layout = [];
              let plotData = [];
              layout.title = section.title;
-             
+             layout.xaxis = { type: 'category'}; 
              layout.xaxis2 = {overlaying: 'x', range: [0,1], showticklabels: false};
              Object.keys(sampleData).forEach(function(key){
-                 console.log(key);
                  let data   = [];
                  Object.keys(sampleData[key]).forEach(function(kf){
                      let ds = sampleData[key][kf];
-                     if( section.div in ds) data.push(ds[section.div]);
+                     if( section.name in ds) data.push(ds[section.name]);
                  });
-                 console.log(data);
                  plotData.push({
                      type: 'box',
                      boxpoints : 'suspectedoutliers',
@@ -174,7 +176,7 @@
                      name      : key,
                  });
              });
-             plotData = addLimits(plotData, section.limits);
+             // FIXME plotData = addLimits(plotData, section.limits);
              Plotly.newPlot(section.div, plotData, layout,  {editable: true, responsive: true})
          });
      }
