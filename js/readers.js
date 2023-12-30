@@ -191,6 +191,18 @@ function cHWChange2(w, h, t){
 
 /**
  * Main Reader function for HK-dashboard
+ * Input needs to be formed like this:
+ * key;cheesefat#;dummy;dummy;dummy;pH;TS;Fett;FiTr;Salz;dummy;Prot
+ *
+ * On return, the data is a dict by key;
+ * sampleData: {
+ * key: {
+ *   kf: {
+ *     pH: value, TS: value; Fett: value; FiTr: value; ...
+ *   },
+ *   kf: ...
+ * }
+ * key: { ... }
  */
 function dashboardHKReader(inText){
     let sampleData = {}
@@ -220,6 +232,20 @@ function dashboardHKReader(inText){
 }
 /**
  *
+ * Input needs to be formed like this:
+ * key;cheesefat#;dummy;dummy;dummy;pH;dummy;TS;Fett;FiTr;Salz;dummy;Prot
+ * The difference to the general HK: pH is the pH after blockformers. Usually, one line has th pH,
+ * the next line all the rest.
+ *
+ * On return, the data is a dict by key;
+ * sampleData: {
+ * key: {
+ *   kf: {
+ *     pH: value, TS: value; Fett: value; FiTr: value; ...
+ *   },
+ *   kf: ...
+ * }
+ * key: { ... }
  */
 function dashboardCagReader(inText){
     let sampleData = {}
@@ -229,11 +255,11 @@ function dashboardCagReader(inText){
                let values = [];
                if (line ==='') return;
                let fields = line.trim().split(/[\t;]/);
-               key = 'C'+(fields.shift()-0);
+               if( Number.isInteger(key-0) ) key = key-0;
                kf  = fields.shift();
                if( kf === '') return;
-               if (!(key in sampleData)) sampleData[key] = {};
-               if (!(kf in sampleData[key])) sampleData[key][kf]= {}
+               if (!(key in sampleData))     sampleData[key]    = {};
+               if (!(kf in sampleData[key])) sampleData[key][kf]= {};
                if ( (fields.length >3)&& fields[3] !=='')
                    sampleData[key][kf].pHnT = parseFloat((fields[3].replace(',', '.')));
                if( fields.length > 11){
