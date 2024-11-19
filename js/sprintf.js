@@ -1,231 +1,217 @@
-/* global window, exports, define */
+/**
+ * JavaScript printf/sprintf functions.
+ *
+ * This code is unrestricted: you are free to use it however you like.
+ *
+ * The functions should work as expected, performing left or right alignment,
+ * truncating strings, outputting numbers with a required precision etc.
+ *
+ * For complex cases these functions follow the Perl implementations of
+ * (s)printf, allowing arguments to be passed out-of-order, and to set
+ * precision and output-length from other argument
+ *
+ * See http://perldoc.perl.org/functions/sprintf.html for more information.
+ *
+ * Implemented flags:
+ *
+ * - zero or space-padding (default: space)
+ *     sprintf("%4d", 3) ->  "   3"
+ *     sprintf("%04d", 3) -> "0003"
+ *
+ * - left and right-alignment (default: right)
+ *     sprintf("%3s", "a") ->  "  a"
+ *     sprintf("%-3s", "b") -> "b  "
+ *
+ * - out of order arguments (good for templates & message formats)
+ *     sprintf("Estimate: %2$d units total: %1$.2f total", total, quantity)
+ *
+ * - binary, octal and hex prefixes (default: none)
+ *     sprintf("%b", 13) ->    "1101"
+ *     sprintf("%#b", 13) ->   "0b1101"
+ *     sprintf("%#06x", 13) -> "0x000d"
+ *
+ * - positive number prefix (default: none)
+ *     sprintf("%d", 3) -> "3"
+ *     sprintf("%+d", 3) -> "+3"
+ *     sprintf("% d", 3) -> " 3"
+ *
+ * - min/max width (with truncation); e.g. "%9.3s" and "%-9.3s"
+ *     sprintf("%5s", "catfish") ->    "catfish"
+ *     sprintf("%.5s", "catfish") ->   "catfi"
+ *     sprintf("%5.3s", "catfish") ->  "  cat"
+ *     sprintf("%-5.3s", "catfish") -> "cat  "
+ *
+ * - precision (see note below); e.g. "%.2f"
+ *     sprintf("%.3f", 2.1) ->     "2.100"
+ *     sprintf("%.3e", 2.1) ->     "2.100e+0"
+ *     sprintf("%.3g", 2.1) ->     "2.10"
+ *     sprintf("%.3p", 2.1) ->     "2.1"
+ *     sprintf("%.3p", '2.100') -> "2.10"
+ *
+ * Deviations from perl spec:
+ * - %n suppresses an argument
+ * - %p and %P act like %g, but without over-claiming accuracy:
+ *   Compare:
+ *     sprintf("%.3g", "2.1") -> "2.10"
+ *     sprintf("%.3p", "2.1") -> "2.1"
+ *
+ * @version 2011.09.23
+ * @author Ash Searle
+ */
+function sprintf() {
+    function pad(str, len, chr, leftJustify) {
+	    var padding = (str.length >= len) ? '' : Array(1 + len - str.length >>> 0).join(chr);
+	    return leftJustify ? str + padding : padding + str;
 
-!function() {
-    'use strict'
-
-    var re = {
-        not_string: /[^s]/,
-        not_bool: /[^t]/,
-        not_type: /[^T]/,
-        not_primitive: /[^v]/,
-        number: /[diefg]/,
-        numeric_arg: /[bcdiefguxX]/,
-        json: /[j]/,
-        not_json: /[^j]/,
-        text: /^[^\x25]+/,
-        modulo: /^\x25{2}/,
-        placeholder: /^\x25(?:([1-9]\d*)\$|\(([^)]+)\))?(\+)?(0|'[^$])?(-)?(\d+)?(?:\.(\d+))?([b-gijostTuvxX])/,
-        key: /^([a-z_][a-z_\d]*)/i,
-        key_access: /^\.([a-z_][a-z_\d]*)/i,
-        index_access: /^\[(\d+)\]/,
-        sign: /^[+-]/
     }
 
-    function sprintf(key) {
-        // `arguments` is not an array, but should be fine for this call
-        return sprintf_format(sprintf_parse(key), arguments)
+    function justify(value, prefix, leftJustify, minWidth, zeroPad) {
+	    var diff = minWidth - value.length;
+	    if (diff > 0) {
+	        if (leftJustify || !zeroPad) {
+		        value = pad(value, minWidth, ' ', leftJustify);
+	        } else {
+		        value = value.slice(0, prefix.length) + pad('', diff, '0', true) + value.slice(prefix.length);
+	        }
+	    }
+	    return value;
     }
 
-    function vsprintf(fmt, argv) {
-        return sprintf.apply(null, [fmt].concat(argv || []))
-    }
+    var a = arguments, i = 0, format = a[i++];
+    return format.replace(sprintf.regex, function(substring, valueIndex, flags, minWidth, _, precision, type) {
+	    if (substring == '%%') return '%';
 
-    function sprintf_format(parse_tree, argv) {
-        var cursor = 1, tree_length = parse_tree.length, arg, output = '', i, k, ph, pad, pad_character, pad_length, is_positive, sign
-        for (i = 0; i < tree_length; i++) {
-            if (typeof parse_tree[i] === 'string') {
-                output += parse_tree[i]
-            }
-            else if (typeof parse_tree[i] === 'object') {
-                ph = parse_tree[i] // convenience purposes only
-                if (ph.keys) { // keyword argument
-                    arg = argv[cursor]
-                    for (k = 0; k < ph.keys.length; k++) {
-                        if (arg == undefined) {
-                            throw new Error(sprintf('[sprintf] Cannot access property "%s" of undefined value "%s"', ph.keys[k], ph.keys[k-1]))
-                        }
-                        arg = arg[ph.keys[k]]
-                    }
-                }
-                else if (ph.param_no) { // positional argument (explicit)
-                    arg = argv[ph.param_no]
-                }
-                else { // positional argument (implicit)
-                    arg = argv[cursor++]
-                }
+	    // parse flags
+	    var leftJustify = false, positivePrefix = '', zeroPad = false, prefixBaseX = false;
+	    for (var j = 0; flags && j < flags.length; j++) switch (flags.charAt(j)) {
+		    case ' ': positivePrefix = ' '; break;
+		    case '+': positivePrefix = '+'; break;
+		    case '-': leftJustify = true; break;
+		    case '0': zeroPad = true; break;
+		    case '#': prefixBaseX = true; break;
+	    }
 
-                if (re.not_type.test(ph.type) && re.not_primitive.test(ph.type) && arg instanceof Function) {
-                    arg = arg()
-                }
+	    // parameters may be null, undefined, empty-string or real valued
+	    // we want to ignore null, undefined and empty-string values
 
-                if (re.numeric_arg.test(ph.type) && (typeof arg !== 'number' && isNaN(arg))) {
-                    throw new TypeError(sprintf('[sprintf] expecting number but found %T', arg))
-                }
+	    if (!minWidth) {
+		    minWidth = 0;
+	    } else if (minWidth == '*') {
+		    minWidth = +a[i++];
+	    } else if (minWidth.charAt(0) == '*') {
+		    minWidth = +a[minWidth.slice(1, -1)];
+	    } else {
+		    minWidth = +minWidth;
+	    }
 
-                if (re.number.test(ph.type)) {
-                    is_positive = arg >= 0
-                }
+	    // Note: undocumented perl feature:
+	    if (minWidth < 0) {
+		    minWidth = -minWidth;
+		    leftJustify = true;
+	    }
 
-                switch (ph.type) {
-                    case 'b':
-                        arg = parseInt(arg, 10).toString(2)
-                        break
-                    case 'c':
-                        arg = String.fromCharCode(parseInt(arg, 10))
-                        break
-                    case 'd':
-                    case 'i':
-                        arg = parseInt(arg, 10)
-                        break
-                    case 'j':
-                        arg = JSON.stringify(arg, null, ph.width ? parseInt(ph.width) : 0)
-                        break
-                    case 'e':
-                        arg = ph.precision ? parseFloat(arg).toExponential(ph.precision) : parseFloat(arg).toExponential()
-                        break
-                    case 'f':
-                        arg = ph.precision ? parseFloat(arg).toFixed(ph.precision) : parseFloat(arg)
-                        break
-                    case 'g':
-                        arg = ph.precision ? String(Number(arg.toPrecision(ph.precision))) : parseFloat(arg)
-                        break
-                    case 'o':
-                        arg = (parseInt(arg, 10) >>> 0).toString(8)
-                        break
-                    case 's':
-                        arg = String(arg)
-                        arg = (ph.precision ? arg.substring(0, ph.precision) : arg)
-                        break
-                    case 't':
-                        arg = String(!!arg)
-                        arg = (ph.precision ? arg.substring(0, ph.precision) : arg)
-                        break
-                    case 'T':
-                        arg = Object.prototype.toString.call(arg).slice(8, -1).toLowerCase()
-                        arg = (ph.precision ? arg.substring(0, ph.precision) : arg)
-                        break
-                    case 'u':
-                        arg = parseInt(arg, 10) >>> 0
-                        break
-                    case 'v':
-                        arg = arg.valueOf()
-                        arg = (ph.precision ? arg.substring(0, ph.precision) : arg)
-                        break
-                    case 'x':
-                        arg = (parseInt(arg, 10) >>> 0).toString(16)
-                        break
-                    case 'X':
-                        arg = (parseInt(arg, 10) >>> 0).toString(16).toUpperCase()
-                        break
-                }
-                if (re.json.test(ph.type)) {
-                    output += arg
-                }
-                else {
-                    if (re.number.test(ph.type) && (!is_positive || ph.sign)) {
-                        sign = is_positive ? '+' : '-'
-                        arg = arg.toString().replace(re.sign, '')
-                    }
-                    else {
-                        sign = ''
-                    }
-                    pad_character = ph.pad_char ? ph.pad_char === '0' ? '0' : ph.pad_char.charAt(1) : ' '
-                    pad_length = ph.width - (sign + arg).length
-                    pad = ph.width ? (pad_length > 0 ? pad_character.repeat(pad_length) : '') : ''
-                    output += ph.align ? sign + arg + pad : (pad_character === '0' ? sign + pad + arg : pad + sign + arg)
-                }
-            }
-        }
-        return output
-    }
+	    if (!isFinite(minWidth)) {
+		    throw new Error('sprintf: (minimum-)width must be finite');
+	    }
 
-    var sprintf_cache = Object.create(null)
+	    if (precision && precision.charAt(0) == '*') {
+		    precision = +a[(precision == '*') ? i++ : precision.slice(1, -1)];
+		    if (precision < 0) {
+		        precision = null;
+		    }
+	    }
 
-    function sprintf_parse(fmt) {
-        if (sprintf_cache[fmt]) {
-            return sprintf_cache[fmt]
-        }
+	    if (precision == null) {
+		    precision = 'fFeE'.indexOf(type) > -1 ? 6 : (type == 'd') ? 0 : void(0);
+	    } else {
+		    precision = +precision;
+	    }
 
-        var _fmt = fmt, match, parse_tree = [], arg_names = 0
-        while (_fmt) {
-            if ((match = re.text.exec(_fmt)) !== null) {
-                parse_tree.push(match[0])
-            }
-            else if ((match = re.modulo.exec(_fmt)) !== null) {
-                parse_tree.push('%')
-            }
-            else if ((match = re.placeholder.exec(_fmt)) !== null) {
-                if (match[2]) {
-                    arg_names |= 1
-                    var field_list = [], replacement_field = match[2], field_match = []
-                    if ((field_match = re.key.exec(replacement_field)) !== null) {
-                        field_list.push(field_match[1])
-                        while ((replacement_field = replacement_field.substring(field_match[0].length)) !== '') {
-                            if ((field_match = re.key_access.exec(replacement_field)) !== null) {
-                                field_list.push(field_match[1])
-                            }
-                            else if ((field_match = re.index_access.exec(replacement_field)) !== null) {
-                                field_list.push(field_match[1])
-                            }
-                            else {
-                                throw new SyntaxError('[sprintf] failed to parse named argument key')
-                            }
-                        }
-                    }
-                    else {
-                        throw new SyntaxError('[sprintf] failed to parse named argument key')
-                    }
-                    match[2] = field_list
-                }
-                else {
-                    arg_names |= 2
-                }
-                if (arg_names === 3) {
-                    throw new Error('[sprintf] mixing positional and named placeholders is not (yet) supported')
-                }
+	    // grab value using valueIndex if required?
+	    var value = valueIndex ? a[valueIndex.slice(0, -1)] : a[i++];
+	    var prefix, base;
 
-                parse_tree.push(
-                    {
-                        placeholder: match[0],
-                        param_no:    match[1],
-                        keys:        match[2],
-                        sign:        match[3],
-                        pad_char:    match[4],
-                        align:       match[5],
-                        width:       match[6],
-                        precision:   match[7],
-                        type:        match[8]
-                    }
-                )
-            }
-            else {
-                throw new SyntaxError('[sprintf] unexpected placeholder')
-            }
-            _fmt = _fmt.substring(match[0].length)
-        }
-        return sprintf_cache[fmt] = parse_tree
-    }
+	    switch (type) {
+		    case 'c': value = String.fromCharCode(+value);
+		    case 's': {
+			    // If you'd rather treat nulls as empty-strings, uncomment next line:
+			    // if (value == null) return '';
 
-    /**
-     * export to either browser or node.js
-     */
-    /* eslint-disable quote-props */
-    if (typeof exports !== 'undefined') {
-        exports['sprintf'] = sprintf
-        exports['vsprintf'] = vsprintf
-    }
-    if (typeof window !== 'undefined') {
-        window['sprintf'] = sprintf
-        window['vsprintf'] = vsprintf
+			    value = String(value);
+			    if (precision != null) {
+				    value = value.slice(0, precision);
+			    }
+			    prefix = '';
+			    break;
+			}
+		    case 'b': base = 2; break;
+		    case 'o': base = 8; break;
+		    case 'u': base = 10; break;
+		    case 'x': case 'X': base = 16; break;
+		    case 'i':
+		    case 'd': {
+			    var number = parseInt(+value);
+			    if (isNaN(number)) {
+				    return '';
+			    }
+			    prefix = number < 0 ? '-' : positivePrefix;
+			    value = prefix + pad(String(Math.abs(number)), precision, '0', false);
+			    break;
+			}
+		    case 'e': case 'E':
+		    case 'f': case 'F':
+		    case 'g': case 'G':
+		    case 'p': case 'P':
+		    {
+                console.log("sprintf, real");
+			        var number = +value;
+			        if (isNaN(number)) {
+				        return '';
+			        }
+			        prefix = number < 0 ? '-' : positivePrefix;
+			        var method;
+			        if ('p' != type.toLowerCase()) {
+				        method = ['toExponential', 'toFixed', 'toPrecision']['efg'.indexOf(type.toLowerCase())];
+			        } else {
+				        // Count significant-figures, taking special-care of zeroes ('0' vs '0.00' etc.)
+				        var sf = String(value).replace(/[eE].*|[^\d]/g, '');
+				        sf = (number ? sf.replace(/^0+/,'') : sf).length;
+				        precision = precision ? Math.min(precision, sf) : precision;
+				        method = (!precision || precision <= sf) ? 'toPrecision' : 'toExponential';
+			        }
+			        //var number_str = Math.abs(number)[method](precision).toLocaleString('de-DE');
+                    let number_str = Math.abs(number).
+                                          toLocaleString('de-DE',
+                                                         {minimumFractionDigits:precision,
+                                                          maximumFractionDigits:precision});
+                    //console.log("sprintf", number_str);
+			        // number_str = thousandSeparation ? thousand_separate(number_str): number_str;
+			        value = prefix + number_str;
+			        break;
+			    }
+		    case 'n': return '';
+		    default: return substring;
+	    }
 
-        if (typeof define === 'function' && define['amd']) {
-            define(function() {
-                return {
-                    'sprintf': sprintf,
-                    'vsprintf': vsprintf
-                }
-            })
-        }
-    }
-    /* eslint-enable quote-props */
-}(); // eslint-disable-line
+	    if (base) {
+		    // cast to non-negative integer:
+		    var number = value >>> 0;
+		    prefix = prefixBaseX && base != 10 && number && ['0b', '0', '0x'][base >> 3] || '';
+		    value = prefix + pad(number.toString(base), precision || 0, '0', false);
+	    }
+	    var justified = justify(value, prefix, leftJustify, minWidth, zeroPad);
+	    return ('EFGPX'.indexOf(type) > -1) ? justified.toUpperCase() : justified;
+    });
+}
+sprintf.regex = /%%|%(\d+\$)?([-+#0 ]*)(\*\d+\$|\*|\d+)?(\.(\*\d+\$|\*|\d+))?([scboxXuidfegpEGP])/g;
+
+/**
+ * Trival printf implementation, probably only useful during page-load.
+ * Note: you may as well use "document.write(sprintf(....))" directly
+ */
+function printf() {
+    // delegate the work to sprintf in an IE5 friendly manner:
+    var i = 0, a = arguments, args = Array(arguments.length);
+    while (i < args.length) args[i] = 'a[' + (i++) + ']';
+    document.write(eval('sprintf(' + args + ')'));
+}
