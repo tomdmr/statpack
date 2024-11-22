@@ -9,6 +9,7 @@
         <script src="js/d3.v7.min.js"></script>
         <script src="js/plotly-2.24.1.min.js"></script>
         <script src="js/fast-stats.js"></script>
+        <script src="js/sprintf.js"></script>
         <style>
          .resizable {
              resize: both;
@@ -349,12 +350,12 @@
              console.log('Filterzweig');
              minSize = recLength
              /*
-             rawData.forEach(function(item){
-                 //console.log(item.name)
-                 if( (item.s.length >= minSize) && (item.s.length<minSet)) minSet = item.s.length;
-                 //console.log(item.s.data);
-             });
-             */
+                rawData.forEach(function(item){
+                //console.log(item.name)
+                if( (item.s.length >= minSize) && (item.s.length<minSet)) minSet = item.s.length;
+                //console.log(item.s.data);
+                });
+              */
              //console.log(minSet);
              rawData.forEach(function(item){
                  if(item.s.length >= minSize){
