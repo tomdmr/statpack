@@ -1,0 +1,249 @@
+<!doctype html>
+<html>
+    <head>
+        <title>Ringtest-Auswertung</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+        <!-- link href="css/pms.css" rel="stylesheet" type="text/css" / -->
+        <script src="js/plotly-2.24.1.min.js"></script>
+        <script src="js/fast-stats.js"></script>
+        <script src="js/sfunc.js"></script>
+        <!-- script src="js/sprintf.js"></script -->
+        <script src="js/readers.js"></script>
+        <script src="js/d3.v7.min.js"></script>
+        <title>Dashboard, beta Version</title>
+        <style>
+         .resizable {
+             resize: both;
+             /*
+                overflow: scroll;
+                border: 1px solid black;
+              */
+             width: 600px;
+             height: 300px;
+         }
+        </style>
+    </head>
+    <body onload="initBody()">
+        <h2>Proficiency testing</h2>
+        Throw data in data field. Line wise format is "Lab;res_1;res_2;.."
+        <p>
+            <textarea id="tdata" rows="8" cols="60"></textarea>
+        </p>
+        <p>
+            <textarea id="tlog" rows="8" cols="60"></textarea>
+        </p>
+        <p>
+            <button onclick="runPT()">Make</button>
+        </p>
+        <div id="divBoxPlot1" class="resizable" onresize="doResize(this)"></div>
+        <div id="divBoxPlot2" class="resizable" onresize="doResize(this)"></div>
+        <div id="divZScores"  class="resizable" onresize="doResize(this)"></div>
+        <script>
+         function initBody(){
+             console.log(t_Dist(-3.74637164416965, 4));
+             console.log(t_Inv(0.01, 4));
+             lab = new Stats({sampling: true});
+             lab.push([54.65, 54.68, 56.02, 54.63, 54.65]);
+             lab.percentile(25);
+             grubbsI(lab, 0.01);
+         }
+         // https://www.itl.nist.gov/div898/handbook/
+         /**
+          * Remove Outliers from a group of samples by using Grubbs test
+          * Input: a Stats object, and alpha, the significance level.
+          * Returns: A new Stat, without outliers.
+          */
+         function grubbsI(s, alpha){
+             let modified = true;
+             while(modified){
+                 modified = false;
+                 let GImin = (s.amean() - s.min)/s.stddev();
+                 let GImax = (s.max - s.amean())/s.stddev();
+                 let n = s.length;
+                 let t = t_Inv(alpha/(2*n), n-2);
+                 let t2 = t*t;
+                 let zCrit = (n-1)/Math.sqrt(n)*Math.sqrt(t2/(n-2+t2));
+                 if( GImin > zCrit ){
+                     console.log('Ausreißer nach unten');
+                     s = new Stats({sampling: true}).push(s._data_sorted.slice(1,n));
+                     s.percentile(25);
+                     modified = true;
+                         
+                 }
+                 if (GImax > zCrit) {
+                     console.log('Ausreißer nach oben');
+                     s = new Stats({sampling: true}).push(s._data_sorted.slice(0,n-1));
+                     s.percentile(25);
+                     modified = true;
+                 }
+             }
+             console.log(s._data_sorted);
+             return s;
+         }
+         function makeBoxPlot(title, sampleData, divId, plotAll, outLimits){
+             let plotData = [];
+             sampleData.forEach(function(item, idx){
+                 if(plotAll || !item.isOutlier){
+                     plotData.push({
+                         type: 'box',
+                         boxpoints: 'suspectedoutliers',
+                         boxmean: 'sd',
+                         showlegend: false,
+                         y : item.s.data,
+                         name: item.name,
+                     })
+                 }
+                 else{
+                     plotData.push({
+                         type: 'box',
+                         boxpoints: 'suspectedoutliers',
+                         boxmean: 'sd',
+                         showlegend: false,
+                         y : [],
+                         name: item.name,
+                     })
+                 }
+             });
+             let layout = {
+                 title: title,
+                 xaxis2: {overlaying: 'x', range: [0,1], showticklabels: false}
+             }
+             outLimits.forEach(function(item){
+                 plotData.push(
+                     {
+                         type: 'scatter',
+                         x: [0, 1],
+                         y: [item, item],
+                         xaxis: 'x2',
+                         mode: 'lines',
+                         showlegend: false,
+                         line: {
+                             color: 'red',
+                             width: 2,
+                             dash: 'dash'
+                         }
+                 });
+             });
+             Plotly.newPlot(divId, plotData, layout,  {editable: true, responsive: true},);
+
+         }
+         function runCochran(sampleData, alpha){
+             // Run Cochran-Test on sampleData, return sampleData with all elements having isOutlier = true
+             sampleData.forEach(function(item, idx, val){
+                 val.isOutlier = false;
+             });
+             let N = sampleData.length;
+             let n = sampleData[0].s.length;
+             let outlierFound = false;
+             do{
+                 outlierFound = false;
+                 let sumSig2 = 0;
+                 let maxSig2 = 0;
+                 let maxIdx  = -1;
+                 sampleData.forEach(function(item, idx){
+                     if(!item.isOutlier){
+                         let sig2 = item.s.stddev()*item.s.stddev();
+                         if( sig2>maxSig2){
+                             maxSig2 = sig2;
+                             maxIdx  = idx;
+                         }
+                         sumSig2 += sig2;
+                     }
+                 });
+                 console.log(maxSig2, sumSig2);
+                 let C = maxSig2/sumSig2;
+                 let Cul = 1/(1+(N-1)/F_Inv(alpha/N,(n-1), (n-1)*(N-1)));
+                 console.log('Iter', C, Cul);
+                 if(C > Cul){
+                     console.log('Found Outlier, idx=', maxIdx);
+                     N = N-1;
+                     outlierFound = true;
+                     sampleData[maxIdx].isOutlier = true;
+                 }
+             }while(outlierFound);
+             return sampleData;
+         }
+         function runPT(){
+             // https://www.gtfch.org/cms/images/stories/media/tk/tk80_4/HerboldEtAl.pdf
+             // https://www.dguv.de/ifa/fachinfos/ringversuche/evauluation-of-the-proficiency-testing/index.jsp
+             // https://1001albumsgenerator.com/teedeerandom
+             // https://www.sixsigmablackbelt.de/msa-messsystemanalyse-messmittelfaehigkeit/
+             // https://sci-hub.ru/10.1007/s00769-003-0610-3
+             // Read raw data like in mBox2
+             let sampleData = readKeyValues( document.getElementById('tdata').value );
+             let N = sampleData.length;
+             let n = sampleData[0].s.length;
+             console.log(N, n);
+             sampleData = runCochran(sampleData, 0.01);
+             makeBoxPlot('All sample data', sampleData, 'divBoxPlot1', true, []);
+             return 0;
+             // Check for UG and OG
+             let X_UG = -1e10;
+             let X_OG =  1e10;
+             let xs = 0.0;
+             let ss = 0.0;
+             let xs_neu = 1e10;
+             let i=5;
+             do{
+                 let allData = new Stats({sampling: true});
+                 sampleData.forEach(function(item){
+                     if(!item.isOutlier){
+                         item.s.data.forEach(function(xi){
+                             if(xi > X_OG) xi = X_OG
+                             if(xi < X_UG) xi = X_UG
+                             allData.push(xi)
+                         });
+                     }
+                 });
+                 let Xs = allData.median();
+                 console.log('Current median: ', Xs);
+                 let allAbs = new Stats({sampling: true});
+                 // let Ss = 1.483 * median( |X_i-Xs| )
+                 allData.data.forEach(function(val){allAbs.push(Math.abs(val-Xs))});
+                 let Ss = 1.483 * allAbs.median();
+                 //console.log(allData)
+                 //console.log('Xs:', Xs, 'Ss', Ss);
+                 X_UG = Xs - Ss
+                 X_OG = Xs + Ss
+                 //console.log(X_UG, X_OG)
+                 xs = allData.amean();
+                 ss = 1.134*allData.stddev();
+
+                 i -= 1;
+             }while(i>0);
+             console.log('Assigned vale: ', xs, 'assigned sigma: ',ss);
+             makeBoxPlot('After Cochrane-Test', sampleData, 'divBoxPlot2', false, [X_UG, X_OG, xs])
+             let Labs = [];
+             let zscores = [];
+             sampleData.forEach(function(item){
+                 if(!item.isOutlier){
+                     let z = (item.s.amean()-xs)/0.005;
+                     Labs.push(item.name);
+                     zscores.push(z);
+                     // console.log((item.s.amean()-xs)/ss);
+                 }
+             });
+             let list = [];
+             for (let j = 0; j < Labs.length; j++)
+                 list.push({'name': Labs[j], 'score': zscores[j]});
+             list.sort(function(a, b) {
+                 return ((a.score < b.score) ? -1 : ((a.score == b.score) ? 0 : 1));
+             });
+             console.log(list);
+             for (let j = 0; j < list.length; j++) {
+                 Labs[j] = list[j].name;
+                 zscores[j] = list[j].score;
+             }
+             let zData = [
+                 {
+                     x: Labs,
+                     y: zscores,
+                     type: 'bar',
+                 }
+             ];
+             Plotly.newPlot('divZScores', zData);
+             return 0;
+         }
+        </script>
+    </body>
+</html>
