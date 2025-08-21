@@ -32,33 +32,22 @@ function Betinc(X,A,B) {
 	return A1/A
 }
 
-
-function t_Dist(t, nu) {
-    X=t;
-    df=nu;
-    with (Math) {
-		if (df<=0) {
-			alert("Degrees of freedom must be positive")
+function Betacdf(Z,A,B) {
+    var S;
+    var BT;
+    var Bcdf;
+	with (Math) {
+		S=A+B;
+		BT=exp(LogGamma(S)-LogGamma(B)-LogGamma(A)+A*log(Z)+B*log(1-Z));
+		if (Z<(A+1)/(S+2)) {
+			Bcdf=BT*Betinc(Z,A,B)
 		} else {
-			A=df/2;
-			S=A+.5;
-			Z=df/(df+X*X);
-			BT=exp(LogGamma(S)-LogGamma(.5)-LogGamma(A)+A*log(Z)+.5*log(1-Z));
-			if (Z<(A+1)/(S+2)) {
-				betacdf=BT*Betinc(Z,A,.5)
-			} else {
-				betacdf=1-BT*Betinc(1-Z,.5,A)
-			}
-			if (X<0) {
-				tcdf=betacdf/2
-			} else {
-				tcdf=1-betacdf/2
-			}
+			Bcdf=1-BT*Betinc(1-Z,B,A)
 		}
-		tcdf=round(tcdf*100000)/100000;
 	}
-    return tcdf;
+	return Bcdf
 }
+
 
 function _subu (p) {
 	var y = -Math.log(4 * p * (1 - p));
@@ -191,6 +180,7 @@ function normalcdf(X){   //HASTINGS.  MAX ERROR = .000001
 	return Prob
 }   
 
+
 function compute(Z, M, SD) {
     with (Math) {
 		if (SD<0) {
@@ -207,6 +197,73 @@ function compute(Z, M, SD) {
 		}
 	}
     return Prob;
+}
+// Student's t-Distribution
+function t_Dist(t, nu) {
+    X=t;
+    df=nu;
+    with (Math) {
+		if (df<=0) {
+			alert("Degrees of freedom must be positive")
+		} else {
+			A=df/2;
+			S=A+.5;
+			Z=df/(df+X*X);
+			BT=exp(LogGamma(S)-LogGamma(.5)-LogGamma(A)+A*log(Z)+.5*log(1-Z));
+			if (Z<(A+1)/(S+2)) {
+				betacdf=BT*Betinc(Z,A,.5)
+			} else {
+				betacdf=1-BT*Betinc(1-Z,.5,A)
+			}
+			if (X<0) {
+				tcdf=betacdf/2
+			} else {
+				tcdf=1-betacdf/2
+			}
+		}
+		tcdf=round(tcdf*100000)/100000;
+	}
+    return tcdf;
+}
+function t_Inv(P, df){
+    let pMin = -1e10;
+    let pMax =  1e10;
+    let pMid = 0.5*(pMin + pMax);
+    while(pMax - pMin > 1.e-9){
+        //console.log(pMid);
+        let Fnow = t_Dist(pMid, df);
+        
+        if( Fnow>P ){
+            pMax = pMid;
+        }else{
+            pMin = pMid;
+        }
+        pMid = 0.5*(pMin + pMax);
+    }
+    return pMid;
+}
+// F-Distribution
+function F_Dist(x, df1, df2){
+    let Z = x/(x+df2/df1);
+    return Betacdf(Z, df1/2, df2/2);
+}
+function F_Inv(F, df1, df2){
+    F = 1-F;
+    pMin = 0.0;
+    pMax = 1e6;
+    let pMid = 0.5*(pMin + pMax);
+    while(pMax - pMin > 1.e-9){
+        //console.log(pMid);
+        let Fnow = F_Dist(pMid, df1, df2);
+        
+        if( Fnow>F ){
+            pMax = pMid;
+        }else{
+            pMin = pMid;
+        }
+        pMid = 0.5*(pMin + pMax);
+    }
+    return pMid;
 }
 
 function random_bm(){
