@@ -164,8 +164,10 @@ function readPairs(inText){
                    let x = parseFloat(pair[0].replace(',', '.'));
                    let y = parseFloat(pair[1].replace(',', '.'));
                    // TODO: Check both are valid
-                   sampleData[0].push(x);
-                   sampleData[1].push(y);
+		   if(isFinite(x) && isFinite(y)){
+                       sampleData[0].push(x);
+                       sampleData[1].push(y);
+		   }
                }
            });
     return sampleData;
