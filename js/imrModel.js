@@ -1,4 +1,5 @@
 /**
+ * Internal: Get characteristic values of data
 */
 function getIMRValues(data){
     let s = new Stats({sampling: true});
@@ -18,6 +19,25 @@ function getIMRValues(data){
     return {'MR': MR, 'LCL_MR': LCL_MR, 'UCL_MR': UCL_MR, 'LCL_I': LCL_I, 'IBar': IBar, 'UCL_I': UCL_I};
 }
 /**
+ * Internal: Run rules check
+ * rule1 is always on, unless explicitly switched off by the parameter.
+ * doRules should be something like
+ * doRules = [
+ *  document.getElementById('R1').checked,
+ *  document.getElementById('R2').checked,
+ *  document.getElementById('R3').checked,
+ *  document.getElementById('R4').checked,
+ *  ]
+ *
+ *  The rules for declaring significant changes in your process
+ *  for the individuals are:
+ *  1 data point outside of 3 standard deviations,
+ *  2 out of 3 outside of 2 standard deviations,
+ *  4 out of 5 outside of one standard deviation and
+ *  8 on the same side of the target.
+ *
+ *
+ *  The function returns 4 arrays of length data, with the violations as true
  */
 function IMRRulesCheck(stats, mean, stddev, doRules=null){
     let is1Dev = [];
@@ -37,9 +57,11 @@ function IMRRulesCheck(stats, mean, stddev, doRules=null){
         r4Sum = Math.sign(sample - mean) == r4Sign ? r4Sum + 1 : 0;
         r4Sign = Math.sign(sample - mean);
         let doR1 = true;
-        if(doRules) let doR2 = doRules[1];
-        if(doRules) let doR3 = doRules[2];
-        if(doRules) let doR4 = doRules[3];
+        let doR2, doR3, doR4;
+        if(doRules) doR1 = doRules[0];
+        if(doRules) doR2 = doRules[1];
+        if(doRules) doR3 = doRules[2];
+        if(doRules) doR4 = doRules[3];
         if(doR1){
             rule1[idx] = is3Dev[idx];
         }
@@ -61,19 +83,17 @@ function IMRRulesCheck(stats, mean, stddev, doRules=null){
                 rule4[idx-1] = rule4[idx-2] = rule4[idx-3] = rule4[idx-3] = rule4[idx-5] = rule4[idx-6] = rule4[idx-7] = true;
             }
         }
-        /*
-           if(rule1[idx]) console.log('Rule 1: '+idx);
-           if(rule2[idx]) console.log('Rule 2: '+idx);
-           if(rule3[idx]) console.log('Rule 3: '+idx);
-           if(rule4[idx]) console.log('Rule 4: '+idx);
-         */
     });
     return [rule1, rule2, rule3, rule4];
 }
-
-function IMRChart(divName, data, myTitle, SL, annotations){
+/**
+ * Draw the IM-R  chart on a div with id divName.
+ * We should return something
+*/
+function IMRChart(divName, data, myTitle, SL, rules, annotations){
+    console.log(divName)
     let IMR_Result = getIMRValues(data);
-    let rr = IMRRulesCheck(data, IMR_Result.IBar, (IMR_Result.UCL_I-IMR_Result.LCL_I)/6.0);
+    let rr = IMRRulesCheck(data, IMR_Result.IBar, (IMR_Result.UCL_I-IMR_Result.LCL_I)/6.0, rules);
 
     let IViol = {x: [], y:[]};
     data.data.forEach(function(val, idx){
@@ -166,9 +186,13 @@ function IMRChart(divName, data, myTitle, SL, annotations){
     }
     let layout = {
         title: myTitle,
+        //width: 600,
+        //height: 400,
         grid: {rows: 2, columns: 1,},
         xaxis: { zeroline: false },
         yaxis: { zeroline: false },
     }
     Plotly.newPlot(divName, plData, layout,  {editable: true, responsive: true},);
+    // N, upper control limit, average, lower control limit, Upper control limit range
+    return [data.data.length, IMR_Result.UCL_I, IMR_Result.IBar, IMR_Result.LCL_I, IMR_Result.UCL_MR];
 }
