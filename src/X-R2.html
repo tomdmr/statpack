@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+        <link href="css/pms.css" rel="stylesheet" type="text/css" />
+        <!-- script src="js/jquery-3.5.1.min.js"></script -->
+        <!-- script src="js/jquery.dataTables.min.js"></script -->
+        <script src="js/readers.js"></script>
+        <script src="js/d3.v7.min.js"></script>
+        <script src="js/plotly-2.24.1.min.js"></script>
+        <script src="js/fast-stats.js"></script>
+        <script src="js/sprintf.js"></script>
+        <style>
+         .resizable {
+             resize: both;
+             overflow: scroll;
+             border: 1px solid black;
+             width: 600px;
+             height: 300px;
+         }
+        </style>
+        <title>Regelkarte XBar-R</title>
+    </head>
+    <body>
+        <h2>Regelkarte XBar-R</h2>
+        <p>
+            Regelkarte zur Darstellung von Produktionsverläufen. Das
+            X-RBar-Chart wird benutzt, wenn pro Charge eine bestimmte
+            Anzahl von Mustern geprüft werden. Das Minimum liegt bei zwei,
+            das Maximum derzeit bei 30 Mustern pro Charge.
+        </p>
+        <p>
+            In das Datenfeld zeilenweise die Messwerte in der Form
+            "Chargenkennzeichnung Messwert" eintragen. Die
+            Chargenkennzeichnung wird genutzt, um die entsprechenden
+            Messwerte zusammen zu fassen. Die Anzahl der Messwerte
+            muss konstant sein. Bei variierender Anzahl wird das
+            Minimum aller Chargen genommen. Bei Chargen, die mehr als
+            das Minimum der Anzahl an Werten haben, werden die
+            zusätzlichen Werte ignoriert. Wem diese Erklärung zu
+            kompliziert ist, sieht zu, dass die Anzahl pro Charge
+            konstant ist.
+        </p>
+        <p>
+            <table>
+                <tr>
+                    <td>Titel</td><td><input type="text" id="title" value="" /></td></td>
+                </tr>
+                <tr>
+                    <td>USL:</td><td><input type="number" id="iusl" /></td>
+                </tr>
+                <tr>
+                    <td>LSL:</td><td><input type="number" id="ilsl" /></td>
+                </tr>
+                <tr>
+                    <td>Daten</td>
+                    <td>
+                        <textarea id="tdata" rows="8" cols="60"></textarea>
+                    </td>
+                </tr>
+                <tr>
+                    <td>Filter</td>
+                    <td><input type="checkbox" id="doFilter"/> nur genau <input id="recLength" type="number" />Daten/Schlüssel</td>
+                </tr>
+                <tr>
+                    <td><button onclick="makeDiag()">Make</button></td>
+                    <td><button onclick="makeImg('myDiv', 'jpg-export')">Copy</button></td>
+                </tr>
+                <tr>
+                    <td>Width</td><td><input type="number" id="cWidth" value="600" onchange="cHWChange()" /></td>
+                </tr>
+                <tr>
+                    <td>Height</td><td><input type="number" id="cHeight" value="300" onchange="cHWChange()"" /></td>
+                </tr>
+            </table>
+            <p>
+                <table id="pTab">
+                </table>
+            </p>
+            <p>
+                <div id='myDiv' class="resizable" onresize="doResize()"></div>
+                <br>
+            </p>
+            <img id="jpg-export"></img>
+    </body>
+    <script>
+     cHWChange();
+     /*
+      * Compute basics of an X-MR chart
+      */
+     /*
+        // https://www.isixsigma.com/topic/d2-d3-d4-c4-a2-novice-question-2/
+      */
+     function XMR(data){
+         // https://r-bar.net/control-chart-constants-tables-explanations/
+         let d2 = [1.1284, 1.6926, 2.0588, 2.3259, 2.5344, 2.7044, 2.8472, 2.9700,
+                   3.0775, 3.1729, 3.2585, 3.3360, 3.4068, 3.4718, 3.5320, 3.5879,
+                   3.6401, 3.6890, 3.7349, 3.7783, 3.8194, 3.8583, 3.8953, 3.9306,
+                   3.9643, 3.9965, 4.0274, 4.0570, 4.0855];
+         let A2 = [1.8800, 1.0233, 0.7286, 0.5768, 0.4832, 0.4193, 0.3725, 0.3367,
+                   0.3083, 0.2851, 0.2658, 0.2494, 0.2354, 0.2231, 0.2123, 0.2028,
+                   0.1943, 0.1866, 0.1796, 0.1733, 0.1675, 0.1621, 0.1572, 0.1526,
+                   0.1484, 0.1445, 0.1408, 0.1373, 0.1341];
+         let D3 = [0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0757, 0.1362, 0.1840,
+                   0.2230, 0.2556, 0.2833, 0.3072, 0.3281, 0.3466, 0.3630, 0.3779,
+                   0.3913, 0.4035, 0.4147, 0.4250, 0.4345, 0.4434, 0.4516, 0.4593,
+                   0.4665, 0.4733, 0.4797, 0.4857, 0.4914];
+         let D4 = [3.2665, 2.5746, 2.2821, 2.1145, 2.0038, 1.9243, 1.8638, 1.8160,
+                   1.7770, 1.7444, 1.7167, 1.6928, 1.6719, 1.6534, 1.6370, 1.6221,
+                   1.6087, 1.5965, 1.5853, 1.5750, 1.5655, 1.5566, 1.5484, 1.5407,
+                   1.5335, 1.5267, 1.5203, 1.5143, 1.5086];
+         let XBar = 0;
+         let RBar = 0;
+         let XiBar = [];
+         let Ri    = [];
+         let Mini  = [];
+         let Maxi  = [];
+         let M = data[0].s.length-1;
+         let N = data.length;
+         let nSamples = 0;
+         console.log('M: '+ M);
+         console.log('N: '+ N);
+         data.forEach(function(prod, idx){
+             if(0){
+                 let xmin =  1e9;
+                 let xmax = -1e9;
+                 let XjBar= 0.0;
+                 let localM = prod.s.length-1;
+                 prod.s.data.forEach(function(measure, jdx){
+                     if(jdx){
+                         if(measure > xmax) xmax = measure;
+                         if(measure < xmin) xmin = measure;
+                         XBar  += measure;
+                         XjBar += measure
+                     }
+                 });
+                 RBar += xmax - xmin;
+                 Ri[idx] = xmax - xmin;
+                 XiBar[idx] = XjBar / M; // M
+                 Mini[idx] = XiBar[idx]-xmin;
+                 Maxi[idx] = xmax-XiBar[idx];
+             }
+             else{
+                 XBar     += prod.s.amean();
+                 nSamples += prod.s.length;
+                 Ri[idx] = prod.s.max - prod.s.min;
+                 RBar += Ri[idx];
+                 XiBar[idx] = prod.s.amean();
+
+                 Mini[idx]  = XiBar[idx] - prod.s.min;
+                 Maxi[idx]  = prod.s.max - XiBar[idx];
+             }
+         });
+         //XBar /= (M*N);
+         XBar  /= N;
+         RBar /= N;
+         let UCL = XBar + A2[M-2]*RBar;
+         let LCL = XBar - A2[M-2]*RBar;
+         let UCLR =  D4[M-2]*RBar;
+         let LCLR =  D3[M-2]*RBar;
+         console.log('XBar:', XBar, ' M: ', M);
+         return {
+             'XBar': XBar, 'RBar': RBar, 'UCL': UCL, 'LCL': LCL, 'UCLR': UCLR, 'LCLR': LCLR, 'XiBar': XiBar, 'Ri': Ri,
+             'Mini' : Mini, 'Maxi': Maxi, 'M':M,
+         };
+     }
+
+     function XMR_Chart(divName, data, myTitle, SL){
+         let XMR_Result = XMR(data);
+         console.log(XMR_Result);
+
+         let table=document.getElementById('pTab');
+         table.innerHTML ='';
+         let row=table.insertRow(-1);
+         let c1 = row.insertCell(-1);
+         let c2 = row.insertCell(-1);
+         c1.innerHTML = 'N';  c2.innerHTML = data.length;
+
+         row=table.insertRow(-1); c1 = row.insertCell(-1); c2 = row.insertCell(-1);
+         c1.innerHTML = 'M';
+         c2.innerHTML = XMR_Result.M;
+
+         row=table.insertRow(-1); c1 = row.insertCell(-1); c2 = row.insertCell(-1);
+         c1.innerHTML = 'Xbar';
+         c2.innerHTML = sprintf('%8.4f +- %8.4f',XMR_Result.XBar, XMR_Result.UCL -XMR_Result.XBar);
+
+         row=table.insertRow(-1); c1 = row.insertCell(-1); c2 = row.insertCell(-1);
+         c1.innerHTML = 'Batch Range';
+         c2.innerHTML = sprintf('%8.4f < %8.4f < %8.4f', XMR_Result.LCLR, XMR_Result.RBar, XMR_Result.UCLR);
+
+
+         let dataIdx  = Array.from({length: data.length}, (_, i) => i + 1);
+         let XViol = {x: [], y:[]};
+
+         for (i=0; i< data.length; i++){
+             if( (XMR_Result.XiBar[i]>XMR_Result.UCL) || (XMR_Result.XiBar[i]<XMR_Result.LCL)){
+                 XViol.x.push(i+1);
+                 XViol.y.push(XMR_Result.XiBar[i]);
+             }
+         }
+
+         // Data plot
+         var Data = {
+             type: 'scatter',
+             x: dataIdx,
+             y: XMR_Result.XiBar,
+             mode: 'lines+markers',
+             name: 'Data',
+             showlegend: true,
+             hoverinfo: 'all',
+             line: {
+                 color: 'blue',
+                 width: 2
+             },
+             marker: {
+                 color: 'blue',
+                 size: 8,
+                 symbol: 'circle'
+             },
+             error_y: { type: 'data', symmetric: false, array: XMR_Result.Maxi, arrayminus: XMR_Result.Mini },
+         }
+         // Violations
+         var Viol = {
+             type: 'scatter',
+             x: XViol.x,
+             y: XViol.y,
+             mode: 'markers',
+             name: 'Violation',
+             showlegend: true,
+             marker: {
+                 color: 'rgb(255,65,54)',
+                 line: {width: 3},
+                 opacity: 0.5,
+                 size: 12,
+                 symbol: 'circle-open'
+             }
+         }
+         // Control Limits
+         var CL = {
+             type: 'scatter',
+             x: [0.5, data.length, null, 0.5, data.length],
+             //y: [-5, -5, null, 5, 5],
+             y: [XMR_Result.LCL, XMR_Result.LCL, null, XMR_Result.UCL, XMR_Result.UCL],
+             mode: 'lines',
+             name: 'LCL/UCL',
+             showlegend: true,
+             line: {
+                 color: 'red',
+                 width: 2,
+                 dash: 'dash'
+             }
+         }
+         // Centerline
+         var Centre = {
+             type: 'scatter',
+             x: [0.5, data.length],
+             y: [XMR_Result.XBar,XMR_Result.XBar],
+             //[ 0, 0],
+             mode: 'lines',
+             name: 'Centre',
+             showlegend: true,
+             line: {
+                 color: 'grey',
+                 width: 2
+             }
+         }
+         var MRMR = {
+             type: 'scatter',
+             x: dataIdx,
+             y: XMR_Result.Ri,
+             name: 'Ri',
+             mode: 'lines+markers',
+             line: {
+                 color: 'blue',
+                 width: 2
+             },
+             marker: {
+                 color: 'blue',
+                 size: 8,
+                 symbol: 'circle'
+             },
+             xaxis: 'x1',
+             yaxis: 'y2',
+         }
+
+         var MRCL = {
+             type: 'scatter',
+             x: [0.5, data.length,null, 0.5, data.length ],
+             y: [XMR_Result.UCLR, XMR_Result.UCLR, null, XMR_Result.LCLR, XMR_Result.LCLR],
+             mode: 'lines',
+             name: 'R-UCL',
+             showlegend: true,
+             line: {
+                 color: 'red',
+                 width: 2,
+                 dash: 'dash'
+             },
+             xaxis: 'x1',
+             yaxis: 'y2',
+         }
+         var plData = [Data,Viol, CL,Centre, MRMR, MRCL]
+         if( SL.length ){
+             plData.push({
+                 type: 'scatter',
+                 x: [0.5, data.length, null, 0.5, data.length],
+                 y: [SL[0], SL[0], null, SL[1], SL[1]],
+                 mode: 'lines',
+                 name: 'LSL/USL',
+                 showlegend: true,
+                 line: {
+                     color: 'red',
+                     width: 2,
+                     //dash: 'dash'
+                 }
+             }
+             );
+         }
+         var layout = {
+             title: myTitle,
+             grid: {rows: 2, columns: 1,},
+             xaxis: {
+                 zeroline: false
+             },
+             yaxis: {
+                 //range: [-20,20],
+                 zeroline: false
+             },
+         }
+         Plotly.newPlot(divName, plData,layout,  {editable: true, responsive: true},);
+
+     }
+     function makeDiag(){
+         let sampleData = [];
+         let title = document.getElementById('title').value;
+         let tdata = document.getElementById('tdata').value.split('\n');
+         let LSL   = document.getElementById('ilsl').value;
+         let USL   = document.getElementById('iusl').value;
+         if((USL ==='') || (LSL==='')){
+             SL = []
+         }
+         else{
+             SL = [Number(USL), Number(LSL)];
+         }
+         let recLength = Number(document.getElementById('recLength').value);
+         //
+         let rawData = readKeyValues( document.getElementById('tdata').value );
+         let minSet = 1024;
+         let minSize = 0;
+         if(document.getElementById('doFilter').checked && recLength > 0){
+             console.log('Filterzweig');
+             minSize = recLength
+             /*
+                rawData.forEach(function(item){
+                //console.log(item.name)
+                if( (item.s.length >= minSize) && (item.s.length<minSet)) minSet = item.s.length;
+                //console.log(item.s.data);
+                });
+              */
+             //console.log(minSet);
+             rawData.forEach(function(item){
+                 if(item.s.length >= minSize){
+                     let foo = item.s.data.sample(minSet);
+                     sampleData.push({
+                         key: item.name,
+                         s  : new Stats({sampling: true}).push(foo)
+                     });
+                 }
+             });
+         }
+         else{
+             console.log('Nicht Filterzweig');
+             sampleData = rawData;
+         }
+         //
+         //
+         //console.log(sampleData);
+         let MMin=1e9;
+         sampleData.forEach(function(sample){
+             if(sample.s.length<MMin) MMin = sample.s.length;
+         });
+         console.log('MMin: ', MMin);
+         if(MMin > 30) MMin = 30;
+         //
+         //   sampleData.forEach(function(sample){ sample.length=MMin; });
+         //
+         console.log(sampleData);
+         let SpL = (document.getElementById('iusl').value === '')
+                 ||(document.getElementById('ilsl').value === '') ?
+                   []
+                 : [ Number(document.getElementById('ilsl').value), Number(document.getElementById('iusl').value) ];
+         XMR_Chart('myDiv', sampleData, document.getElementById('title').value, SpL);
+     }
+     function cHWChange(){
+         let W = document.getElementById('cWidth').value;
+         let H = document.getElementById('cHeight').value;
+         document.getElementById('myDiv').setAttribute("style","Width:"+ W +'px;Height:'+ H+'px');
+     }
+    </script>
+</html>
