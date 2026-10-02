@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+        <link href="css/bootstrap-5.3/css/bootstrap.min.css" rel="stylesheet">
+        <link href="css/bootstrap-icons/bootstrap-icons.min.css" rel="stylesheet">
+        <script src="css/bootstrap-5.3/js/bootstrap.bundle.min.js"></script>
+        <script src="js/readers.js"></script>
+        <script src="js/d3.v7.min.js"></script>
+        <script src="js/plotly-2.24.1.min.js"></script>
+        <script src="js/fast-stats.js"></script>
+        <script src="js/sfunc.js"></script>
+        <script src="js/sprintf.js"></script>
+        <style>
+         .resizable {
+             resize: both;
+             overflow: scroll;
+             border: 1px solid black;
+             width: 800px;
+             height: 400px;
+         }
+         .nopadding {
+             padding: 0;
+             margin: 0;
+         }
+        </style>
+        <title>Multi Boxplot</title>
+    </head>
+    <body>
+        <div class="container-fluid">
+            <div class="row">
+                <h2>Multi Boxplots</h2>
+            </div>
+            <div class="row">
+                <div class="col-md-1"></div>
+                <div class="col-md-8">
+                    <div class="input-group mb-3">
+                        <span class="input-group-text" id="input-titel">Titel</span>
+                        <input id="title" type="text" class="form-control" placeholder="Titel" aria-label="Titel" aria-describedby="input-titel">
+                    </div>
+
+                    <div class="input-group mb-3">
+                        <span class="input-group-text" id="input-xTitle">Einheit x:</span>
+                        <input type="text" class="form-control" aria-label="Einheit x" aria-describedby="input-usl" id="xTitle">
+                        <span class="input-group-text" id="input-yTitle">Einheit y:</span>
+                        <input type="text" class="form-control" aria-label="Einheit y" aria-describedby="input-yTitle" id="yTitle">
+                    </div>
+                    <div class="input-group mb-3">
+                        <span class="input-group-text" id="input-usl">Y-Min</span>
+                        <input type="number" class="form-control" aria-label="Y-Min" aria-describedby="input-usl" id="yMin">
+                        <span class="input-group-text" id="input-ymax">Y-Max</span>
+                        <input type="number" class="form-control" aria-label="Y-Max" aria-describedby="input-usl" id="yMax">
+                    </div>
+
+                    <div class="input-group mb-3">
+                        <span class="input-group-text" id="input-usl">LSL</span>
+                        <input type="number" class="form-control" aria-label="LSL" aria-describedby="input-lsl" id="ilsl">
+                        <span class="input-group-text" id="input-usl">USL</span>
+                        <input type="number" class="form-control" aria-label="USL" aria-describedby="input-usl" id="iusl">
+                    </div>
+
+                    <div class="input-group mb-3">
+                        <span class="input-group-text" id="input-width">Width</span>
+                        <input type="number" id="cWidth" class="form-control" aria-label="" aria-describedby="input-width" value="600">
+                        <span class="input-group-text" id="input-width">Height</span>
+                        <input type="number" id="cHeight" class="form-control" aria-label="" aria-describedby="input-height" value="300">
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-1"></div>
+                <div class="col-md-8">
+                    <div class="mb-3">
+                        <label for="exampleFormControlTextarea1" class="form-label">Daten</label>
+                        <textarea id="tdata" class="form-control" rows="8" cols="60"></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-1"></div>
+                <div class="col-md-3">
+                    <button type="button" class="btn btn-primary" onclick="makeDiag()">Make</button>
+                    <button type="button" class="btn btn-primary" onclick="makeImg('plotlyDiagram', 'jpg-export')">Copy</button>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-1"></div>
+                <div class="col-md-4">
+                    <table id="pTab" class="table table-bordered table-sm"></table>
+                </div>
+                <div class="col-md-1"></div>
+            </div>
+            <div class="row">
+                <div class="col-md-1"></div>
+                <div class="col-md-10">
+                    <div id="plotlyDiagram" class="resizable" style="width:600px;height:300px" onresize="resize(this)" onmousemove="move(this)"></div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-1"></div>
+                <div class="col-md-10">
+                    <img id="jpg-export"></img>
+                </div>
+            </div>
+        </div>
+        <script>
+         Array.prototype.removeIf = function(callback) {
+             var i = this.length;
+             while (i--) {
+                 if (callback(this[i], i)) {
+                     this.splice(i, 1);
+                 }
+             }
+         };
+
+         function studentT(D1, D2){
+             let w1   = D1.data.length -1;
+             let sig1 = D1.stddev();
+             let X1   = D1.amean();
+             let w2   = D2.data.length -1;
+             let sig2 = D2.stddev();
+             let X2   = D2.amean();
+
+             let sigP = Math.sqrt((w1*sig1*sig1+w2*sig2*sig2) /(w1+w2)  );
+             let SE = sigP * Math.sqrt(1./D1.data.length + 1./D2.data.length );
+             let t = Math.abs(X1-X2)/SE;
+             return (2.*(1.0-t_Dist(t, w1+w2)));
+         }
+         function welchT(D1, D2){
+             let N1   = D1.data.length;
+             let X1   = D1.amean();
+             let sig1 = D1.stddev();
+             let N2   = D2.data.length;
+             let X2   = D2.amean();
+             let sig2 = D2.stddev();
+
+             let t = Math.abs((X1-X2)/Math.sqrt(sig1*sig1/N1 + sig2*sig2/N2));
+             let df = (sig1**2 / N1 + sig2**2/N2)**2/( (sig1**2/N1)**2/(N1-1) + (sig2**2/N2)**2/(N2-1) );
+             //console.log('t: '+t+', df: '+df);
+             return (2.*(1.0-t_Dist(t, df)));
+         }
+         function makeDiag(){
+             let title = document.getElementById('title').value;
+             let sampleData = readKeyValues( document.getElementById('tdata').value );
+             sampleData.forEach(function(item, idx, val){
+                 item.type = 'box';
+                 item.boxpoints = 'suspectedoutliers';
+                 item.showlegend = false;
+             });
+             //console.log(sampleData);
+             let SpLvl =     [
+                 (document.getElementById('iusl').value === '')? null : Number(document.getElementById('iusl').value),
+                 (document.getElementById('ilsl').value === '')? null : Number(document.getElementById('ilsl').value)];
+
+             console.log(SpLvl);
+             let layout = {};
+             layout.title = title;
+             /* FIXME: Does not work */
+             layout.xaxis= { title: {text: document.getElementById('xTitle').value}, }
+             layout.yaxis= { title: {text: document.getElementById('yTitle').value}, }
+             layout.xaxis2 = {overlaying: 'x', range: [0,1], showticklabels: false};
+             let yMin = document.getElementById('yMin').value;
+             let yMax = document.getElementById('yMax').value;
+             if( (yMin !=="") && (yMax !== "") ){
+                 layout.yaxis.range = [yMin, yMax];
+             }
+             console.log('Layout:');
+             console.log(layout);
+
+             sampleData.forEach(function(val, idx, trace){
+                 trace[idx].y = trace[idx].s.data;
+             })
+             let table=document.getElementById('pTab');
+             console.log(table);
+             let tableHeaderRowCount = 0;
+             var rowCount = table.rows.length;
+             for (var i = tableHeaderRowCount; i < rowCount; i++) {
+                 table.deleteRow(tableHeaderRowCount);
+             }
+             // Header
+             let row = table.insertRow(-1);
+             let cell = row.insertCell(-1);
+             cell = row.insertCell(-1); cell.innerHTML = 'N';
+             cell = row.insertCell(-1); cell.innerHTML = 'Min';
+             cell = row.insertCell(-1); cell.innerHTML = 'Median';
+             cell = row.insertCell(-1); cell.innerHTML = 'Mean';
+             cell = row.insertCell(-1); cell.innerHTML = 'Max';
+             cell = row.insertCell(-1); cell.innerHTML = 'StdDev';
+             for(i=0; i<sampleData.length; i++){
+                 let cell = row.insertCell(-1);
+                 cell.innerHTML = sampleData[i].name;
+             }
+             let sig = new Array();
+             for(i=0; i<sampleData.length; i++){
+                 sig[i] = new Array();
+                 for(j=0; j<=i; j++){
+                     if(j==i){sig[i][j]= '--';}
+                     else{
+                         sig[i][j]=sprintf('%8.4f', welchT(sampleData[i].s, sampleData[j].s));
+                         sig[j][i]=sig[i][j];
+                     }
+                 }
+             }
+             //console.log(sig);
+             for(i=0; i<sampleData.length; i++){
+                 // Neue Zeile
+                 let row = table.insertRow(-1);
+                 let res = '';
+                 // Neue Spalte in der Reihe
+                 let cell = row.insertCell(-1);
+                 cell.innerHTML = sampleData[i].name;
+                 cell = row.insertCell(-1);  cell.innerHTML = sampleData[i].s.length;
+                 cell = row.insertCell(-1);  cell.innerHTML = sprintf(' %8.4f', sampleData[i].s.min);
+                 cell = row.insertCell(-1);  cell.innerHTML = sprintf(' %8.4f',sampleData[i].s.median());
+                 cell = row.insertCell(-1);  cell.innerHTML = sprintf(' %8.4f',sampleData[i].s.amean());
+                 cell = row.insertCell(-1);  cell.innerHTML = sprintf(' %8.4f',sampleData[i].s.max);
+                 cell = row.insertCell(-1);  cell.innerHTML = sprintf(' %8.4f',sampleData[i].s.stddev());
+                 for(j=0; j<sampleData.length; j++){
+                     cell = row.insertCell(-1);
+                     cell.innerHTML = sig[i][j];
+                 }
+             }
+
+             if (document.getElementById('ilsl').value !== ''){
+                 let y = Number(document.getElementById('ilsl').value);
+                 sampleData.push({
+                     type: 'scatter',
+                     x: [0, 2],
+                     y: [y, y],
+                     xaxis: 'x2',
+                     mode: 'lines',
+                     showlegend: false,
+                     line: {
+                         color: 'red',
+                         width: 2,
+                         dash: 'dash'
+                     }
+                 });
+             }
+             if (document.getElementById('iusl').value !== ''){
+                 let y = Number(document.getElementById('iusl').value);
+                 sampleData.push({
+                     type: 'scatter',
+                     x: [0, 2],
+                     y: [y, y],
+                     xaxis: 'x2',
+                     mode: 'lines',
+                     showlegend: false,
+                     line: {
+                         color: 'red',
+                         width: 2,
+                         dash: 'dash'
+                     }
+                 });
+             }
+             Plotly.newPlot('plotlyDiagram', sampleData, layout,  {editable: true, responsive: true},);
+         }
+         // https://lemonadejs.com/docs/v5/examples/div-onresize/
+         function move(e){
+             if ((e.w && e.w !== e.offsetWidth) || (e.h && e.h !== e.offsetHeight)) {
+                 new Function(e.getAttribute('onresize')).call(e);
+             }
+             e.w = e.offsetWidth;
+             e.h = e.offsetHeight;
+             document.getElementById('cWidth').value = e.w;
+             document.getElementById('cHeight').value = e.h;
+         }
+         function resize() {
+             //console.log('Resized')
+         }         
+        </script>
+    </body>
+</html>
