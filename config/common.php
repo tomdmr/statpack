@@ -1,9 +1,9 @@
 <?php
-$CSS="css";
+$CSS="/css";
 $JS="js";
 function inputGroup($id, $type, $label){
     echo "<span class='input-group-text' id='input-{$id}'>{$label}</span>\n";
-    echo "<input type='{$type}' class='form-control' aria-label='{$label}' aria-describedby='input-{$id}' id='{$id}'>\n";
+    echo "<input id='{$id}' type='{$type}' class='form-control' aria-label='{$label}' aria-describedby='input-{$id}'>\n";
 }
 function btnTrigger(){
 
