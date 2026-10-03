@@ -1,55 +1,69 @@
+<?php
+include('config/common.php')
+?>
 <!DOCTYPE html>
 <html>
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-        <link href="css/pms.css" rel="stylesheet" type="text/css" />
-        <script src="js/jquery-3.5.1.min.js"></script>
-        <script src="js/jquery.dataTables.min.js"></script>
-        <script src="js/plotly-2.24.1.min.js"></script>
+        <link href="<?=$CSS?>/bootstrap-5.3/css/bootstrap.min.css" rel="stylesheet">
+        <link href="<?=$CSS?>/bootstrap-icons/bootstrap-icons.min.css" rel="stylesheet">
+        <script src="<?=$CSS?>/bootstrap-5.3/js/bootstrap.bundle.min.js"></script>
+        <script src="js/<?=$PLOTLY?>"></script>
         <script src="js/fast-stats.js"></script>
         <script src="js/sfunc.js"></script>
         <script src="js/sprintf.js"></script>
         <script src="js/readers.js"></script>
         <script src="js/d3.v7.min.js"></script>
-        <title>Template Title</title>
+        <style>
+         .resizable {
+             resize: both;
+             overflow: scroll;
+             border: 1px solid black;
+             width: 800px;
+             height: 400px;
+         }
+         .nopadding {
+             padding: 0;
+             margin: 0;
+         }
+        </style>
+        <title>Sankey-Diagram</title>
     </head>
     <body>
-        <table>
-            <tr>
-                <td>Titel</td><td><input type="text" id="title" value="Massenströme Jessen" /></td></td>
-            </tr>
-            <tr>
-                <td>Daten</td>
-                <td>
-                    <textarea id="tdata">
-Molkelinie;UF;80.0
-RO;UF;        10.0
-UF;HK-3;       2.5
-UF;RO;        87.5
-RO;MVR;29.5
-RO;Polisher;48.5
-MVR;PE-50;11.8
-MVR;Brüden;17.7
-PE-50;HK-1;11.8
-HK-1;PE-70;8.4
-HK-1;Brüden;3.4
-                    </textarea>
-                </td>
-            </tr>
-            <tr>
-                <td><button onclick="makeDiag()">Make</button></td>
-                <td><button onclick="makeImg('myDiv', 'jpg-export')">Copy</button></td>
-            </tr>
-            <tr>
-                <td>Width</td><td><input type="number" id="cWidth" value="600" onchange="cHWChange()" /></td>
-            </tr>
-            <tr>
-                <td>Height</td><td><input type="number" id="cHeight" value="300" onchange="cHWChange()" /></td>
-            </tr>
-            <tr>
-                <button onclick="makeDiag()">Make</button>
-            </tr>
-        </table>
+        <div class="container-fluid">
+            <div class="row">
+                <h2>Sankey Diagram</h2>
+                See info here.
+            </div>
+            <div class="row">
+                <div class="col-md-1"></div>
+                <div class="col-md-8">
+                    <div class="input-group mb-3">
+                        <?php inputGroup("title", "text", "Titel"); ?>
+                    </div>
+                    <div class="input-group mb-3">
+                        <span class="input-group-text" id="input-width">Width</span>
+                        <input type="number" id="cWidth" class="form-control" aria-label="" aria-describedby="input-width" value="600">
+                        <span class="input-group-text" id="input-width">Height</span>
+                        <input type="number" id="cHeight" class="form-control" aria-label="" aria-describedby="input-height" value="300">
+                    </div>
+                </div><!-- col-md-8 -->
+                
+
+            </div>
+            <div class="row">
+                <div class="col-md-1"></div>
+                <div class="col-md-8">
+                    <div class="mb-3">
+                        <label for="exampleFormControlTextarea1" class="form-label">Daten</label>
+                        <textarea id="tdata" class="form-control" rows="8" cols="60"></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <?php btnTrigger(); ?>
+            </div>
+        </div>
         <p>
             <div id='myDiv' class="resizable" onresize="doResize(this)"></div>
             <br>
@@ -122,7 +136,7 @@ HK-1;Brüden;3.4
              }
          });
          gobble(values, nodes, link);
-         var layout = {"title": title}
+         var layout = {"title": {text: title}}
          Plotly.newPlot('myDiv',
                         [{
                             type: "sankey",
@@ -143,48 +157,6 @@ HK-1;Brüden;3.4
                         {editable: true, responsive: true},
          );
      }
-     function cHWChange(){
-         let W = document.getElementById('cWidth').value;
-         let H = document.getElementById('cHeight').value;
-         document.getElementById('myDiv').setAttribute("style","Width:"+ W +'px;Height:'+ H+'px');
-     }
-     /*
-        let values = [];
-        let link   = { source: [], target: [], value: [] };
-        let label  = [];
-        let nodes  = [];
-        
-        enter_pair(values, 'Molkelinie', 'UF', 80.0);
-        enter_pair(values, 'RO', 'UF',         10.0);
-        enter_pair(values, 'UF', 'HK-3',        2.5);
-        enter_pair(values, 'UF', 'RO',         87.5);
-        enter_pair(values, 'RO', 'MVR', 29.5);
-        enter_pair(values, 'RO', 'Polisher', 48.5);
-        enter_pair(values, 'MVR', 'PE-50', 11.8);
-        enter_pair(values, 'MVR', 'Brüden', 17.7);
-        enter_pair(values, 'PE-50', 'HK-1', 11.8);
-        enter_pair(values, 'HK-1', 'PE-70', 8.4);
-        enter_pair(values, 'HK-1', 'Brüden', 3.4);
-        gobble(values, nodes, link);
-        var layout = {"title": "Massenströme TP-Jessen"}
-        Plotly.newPlot('myDiv',
-        [{
-        type: "sankey",
-        arrangement: 'freeform',
-        domain: {
-        x: [0,1],
-        y: [0,1]
-        },
-        valueformat: ".1f",
-        valuesuffix: "t/h",
-        node:{
-        label: nodes,
-        pad:10, // 10 Pixels
-        },
-        link: link,
-        }],
-        layout);
-        
-      */
+     <?php resizeHandler(); ?>
     </script>
 </html>
