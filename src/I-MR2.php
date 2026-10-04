@@ -69,15 +69,6 @@ include('config/common.php')
                 </div><!-- col-md-8 -->
             </div>
             <div class="row">
-                <div class="col-md-1"></div>
-                <div class="col-md-8">
-                    <div class="mb-3">
-                        <label for="exampleFormControlTextarea1" class="form-label">Daten</label>
-                        <textarea id="tdata" class="form-control" rows="8" cols="60"></textarea>
-                    </div>
-                </div>
-            </div>
-            <div class="row">
                 <?php btnTrigger(); ?>
             </div>
             <div class="row">
@@ -88,6 +79,15 @@ include('config/common.php')
                 <div class="col-md-1"></div>
             </div>
             <?php plotlyDiagExport(); ?>
+            <div class="row">
+                <div class="col-md-1"></div>
+                <div class="col-md-8">
+                    <div class="mb-3">
+                        <label for="exampleFormControlTextarea1" class="form-label">Daten</label>
+                        <textarea id="tdata" class="form-control" rows="8" cols="60"></textarea>
+                    </div>
+                </div>
+            </div>
         </div> <!--container-fluid -->
         <script>
          function makeDiag(){
