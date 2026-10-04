@@ -1,9 +1,14 @@
+<?php
+include('config/common.php')
+?>
 <!doctype html>
 <html>
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-        <link href="css/pms.css" rel="stylesheet" type="text/css" />
-        <script src="js/plotly-2.24.1.min.js"></script>
+        <link href="<?=$CSS?>/bootstrap-5.3/css/bootstrap.min.css" rel="stylesheet">
+        <link href="<?=$CSS?>/bootstrap-icons/bootstrap-icons.min.css" rel="stylesheet">
+        <script src="<?=$CSS?>/bootstrap-5.3/js/bootstrap.bundle.min.js"></script>
+        <script src="js/<?=$PLOTLY?>"></script>
         <script src="js/fast-stats.js"></script>
         <script src="js/sfunc.js"></script>
         <script src="js/sprintf.js"></script>
@@ -12,10 +17,8 @@
         <style>
          .resizable {
              resize: both;
-             /*
-                overflow: scroll;
-                border: 1px solid black;
-              */
+             overflow: scroll;
+             border: 1px solid black;
              width: 600px;
              height: 300px;
          }
@@ -23,62 +26,66 @@
         <title>Bland-Altman Vergleichsplot</title>
     </head>
     <body>
-        <h2>Bland-Altman Vergleichsplot</h2>
-        <p>
-            Vergleich, wie gut zwei Meßmethoden übereinstimmen,
-            insbesondere Referenzmethode und Schnellmethode.
-        </p>
-        <p>
-            Daten müssen in geordneten Paaren für das gleiche Sample
-            vorliegen, getrennt durch Tab oder ";"
-        </p>
-        <p>
-            Vorzeichenregelung: Es wird die vordere Spalte von der hinteren abgezogen. Negativer Bias bedeutet also, dass die vordere Methode im Mittel größere Ergebnisse erzielt.
-        </p>
-        <table>
-            <tr>
-                <td>Titel</td><td><input type="text" id="title" value="" /></td>
-            </tr>
-            <tr>
-                <td>Einheit x:</td><td><input type="text" id="xtitle" value="" /></td>
-            </tr>
-            <tr>
-                <td>Einheit y:</td><td><input type="text" id="ytitle" value="" /></td>
-            </tr>
-            <tr>
-                <td>Daten</td>
-                <td>
-                    <textarea id="tdata" rows="8" cols="60"></textarea>
-                </td>
-            </tr>
-            <tr>
-                <td><button onclick="makeDiag()">Make</button></td>
-                <td><button onclick="makeImg('myDiv', 'jpg-export')">Copy</button></td>
-            </tr>
-            <tr>
-                <td>Width</td><td><input type="number" id="cWidth" value="600" onchange="cHWChange()" /></td>
-            </tr>
-            <tr>
-                <td>Height</td><td><input type="number" id="cHeight" value="300" onchange="cHWChange()" /></td>
-            </tr>
-            <tr>
-                <td>Y-Max</td><td><input type="number" id="yMax" value=""/></td>
-            </tr>
-            <tr>
-                <td>Y-Min</td><td><input type="number" id="yMin" value=""/></td>
-            </tr>
-        </table>
-        <p>
-            <table id="pTab">
-            </table>
-        </p>
-        <p>
-            <div id='myDiv' class="resizable" onresize="doResize(this)"></div>
-            <br>
-        </p>
-        <img id="jpg-export"></img>
+        <div class="container-fluid">
+            <div class="row">
+                <h2>Bland-Altman Vergleichsplot</h2>
+                <p> Vergleich, wie gut zwei Meßmethoden übereinstimmen,
+                    insbesondere Referenzmethode und Schnellmethode.
+                </p>
+                <p>
+                    Daten müssen in geordneten Paaren für das gleiche Sample
+                    vorliegen, getrennt durch Tab oder ";"
+                </p>
+                <p>
+                    Vorzeichenregelung: Es wird die vordere Spalte von der hinteren abgezogen. Negativer Bias bedeutet also, dass die
+                    vordere Methode im Mittel größere Ergebnisse erzielt.
+                </p>
+            </div>
+            <div class="row">
+                <div class="col-md-1"></div>
+                <div class="col-md-8">
+                    <div class="input-group mb-3">
+                        <?php inputGroup("title", "text", "Titel"); ?>
+                    </div>
+                    <div class="input-group mb-3">
+                        <span class="input-group-text" id="input-xTitle">Einheit x:</span>
+                        <input type="text" class="form-control" aria-label="Einheit x" aria-describedby="input-usl" id="xTitle">
+                        <span class="input-group-text" id="input-yTitle">Einheit y:</span>
+                        <input type="text" class="form-control" aria-label="Einheit y" aria-describedby="input-yTitle" id="yTitle">
+                    </div>
+                    <div class="input-group mb-3">
+                        <?php inputGroup("yMin", "number", "Y-Min"); ?>
+                        <?php inputGroup("yMax", "number", "Y-Max"); ?>
+                    </div>
+                    <div class="input-group mb-3">
+                        <span class="input-group-text" id="input-width">Width</span>
+                        <input type="number" id="cWidth" class="form-control" aria-label="" aria-describedby="input-width" value="600">
+                        <span class="input-group-text" id="input-width">Height</span>
+                        <input type="number" id="cHeight" class="form-control" aria-label="" aria-describedby="input-height" value="300">
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <?php btnTrigger(); ?>
+            </div>
+            <div class="row">
+                <div class="col-md-1"></div>
+                <div class="col-md-4">
+                    <table id="pTab" class="table table-bordered table-sm"></table>
+                </div>
+            </div>
+            <?php plotlyDiagExport(); ?>
+            <div class="row">
+                <div class="col-md-1"></div>
+                <div class="col-md-8">
+                    <div class="mb-3">
+                        <label for="exampleFormControlTextarea1" class="form-label">Daten</label>
+                        <textarea id="tdata" class="form-control" rows="8" cols="60"></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
         <script>
-         cHWChange();
          function makeDiag(){
              let myTitle = document.getElementById('title').value;
              let sampleData = readPairs( document.getElementById('tdata').value );
@@ -147,16 +154,16 @@
                  name: 'Bias',
                  line: {color: 'red', dash: 'dot'},
              }
-             
+
              let plData = [Data];
              let Shapes = [Bias, lLOA, uLOA];
              let layout = {
-                 title: myTitle,
+                 title: {text: myTitle},
                  xaxis: {
-                     title: {text: document.getElementById('xtitle').value},
+                     title: {text: document.getElementById('xTitle').value},
                  },
                  yaxis: {
-                     title: {text: document.getElementById('ytitle').value},
+                     title: {text: document.getElementById('yTitle').value},
                  },
                  zeroline: false,
                  shapes: Shapes,
@@ -180,7 +187,7 @@
              if( (yMin !=="") && (yMax !== "") ){
                  layout.yaxis.range = [yMin, yMax];
              }
-             Plotly.newPlot('myDiv', plData,layout,  {editable: true, responsive: true},);
+             Plotly.newPlot('plotlyDiagram', plData,layout,  {editable: true, responsive: true},);
 
              let table = document.getElementById('pTab');
              table.innerHTML = '';
@@ -194,7 +201,7 @@
              row = table.insertRow(-1);c1=row.insertCell(-1); c2=row.insertCell(-1);
              c1.innerHTML='Bias'; c2.innerHTML=bias;
 
-             
+
              row = table.insertRow(-1);c1=row.insertCell(-1); c2=row.insertCell(-1);
              c1.innerHTML='uLOA'; c2.innerHTML=bias+1.96*sd;
 
@@ -202,12 +209,8 @@
              c1.innerHTML='lLOA'; c2.innerHTML=bias-1.96*sd;
 
          }
-         function cHWChange(){
-             let W = document.getElementById('cWidth').value;
-             let H = document.getElementById('cHeight').value;
-             document.getElementById('myDiv').setAttribute("style","Width:"+ W +'px;Height:'+ H+'px');
-         }
+         <?php resizeHandler(); ?>
         </script>
-        
+
     </body>
 </html>
