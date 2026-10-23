@@ -29,7 +29,7 @@ include('config/common.php')
         </style>
         <title>I-MR Chart (Regelkarte)</title>
     </head>
-    <body>
+    <body onload="initPage()">
         <div class="container-fluid">
             <div class="row">
                 <h2>I-MR Chart</h2>
@@ -38,11 +38,12 @@ include('config/common.php')
                 <div class="col-md-1"></div>
                 <div class="col-md-8">
                     <div class="input-group mb-3">
-                        <?php inputGroup("title", "text", "Titel"); ?>
+                        <?php inputGroup("input-title", "text", "Titel"); ?>
+                        <?php inputGroup("input-subtitle", "text", "Untertitel"); ?>
                     </div>
                     <div class="input-group mb-3">
-                        <?php inputGroup("iusl", "number", "USL"); ?>
-                        <?php inputGroup("ilsl", "number", "LSL"); ?>
+                        <?php inputGroup("input-usl", "number", "USL"); ?>
+                        <?php inputGroup("input-lsl", "number", "LSL"); ?>
                     </div>
                     <div class="input-group mb-3">
                         <span class="input-group-text" id="input-width">Width</span>
@@ -51,7 +52,7 @@ include('config/common.php')
                         <input type="number" id="cHeight" class="form-control" aria-label="" aria-describedby="input-height" value="300">
                     </div>
                     <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="checkbox" id="R1" value="option1">
+                        <input class="form-check-input" type="checkbox" id="R1" value="option1" checked>
                         <label class="form-check-label" for="inlineCheckbox1"> 1 > 3 StDev off</label>
                     </div>
                     <div class="form-check form-check-inline">
@@ -94,21 +95,21 @@ include('config/common.php')
              //document.getElementById('tdata').value = text;
              let data = readValues(document.getElementById('tdata').value);
              console.log(data);
-             let SpL = (document.getElementById('iusl').value === '')
-                     ||(document.getElementById('ilsl').value === '') ?
+             let SpL = (document.getElementById('input-usl').value === '')
+                     ||(document.getElementById('input-lsl').value === '') ?
                        []
-                     : [ Number(document.getElementById('ilsl').value), Number(document.getElementById('iusl').value) ];
+                     : [ Number(document.getElementById('input-lsl').value), Number(document.getElementById('input-usl').value) ];
              console.log(SpL);
 
-             let SpLvl =     [ Number(document.getElementById('ilsl').value), Number(document.getElementById('iusl').value) ];
+             let SpLvl =    [ Number(document.getElementById('input-lsl').value), Number(document.getElementById('input-usl').value) ];
              let N, UCL_I, IBar, LCL_I, UCL_MR;
              let plotlyDiagram = document.getElementById('plotlyDiagram');
-             //plotlyDiagram.style.width= '800px';
-             //plotlyDiagram.style.height= '400px';
+
              [N, UCL_I, IBar, LCL_I, UCL_MR] =
                  IMRChart('plotlyDiagram',
                           data,
-                          document.getElementById('title').value,
+                          document.getElementById('input-title').value,
+                          document.getElementById('input-subtitle').value,
                           SpL, [
                               document.getElementById('R1').checked,
                               document.getElementById('R2').checked,
@@ -116,7 +117,7 @@ include('config/common.php')
                               document.getElementById('R4').checked,
                           ]
                  );
-
+             //
              let table=document.getElementById('pTab');
              table.innerHTML ='';
              let row=table.insertRow(-1);
@@ -134,6 +135,20 @@ include('config/common.php')
 
              row=table.insertRow(-1); c1 = row.insertCell(-1); c2 = row.insertCell(-1);
              c1.innerHTML = 'UCL R';  c2.innerHTML = sprintf('%8.4f', UCL_MR);
+         }
+         function getParameters(){
+             let res = {};
+             location.search.substr(1).split('&').forEach(function(item){
+                 let tmp = item.split('=');
+                 res[tmp[0]] = decodeURIComponent(tmp[1]);
+             })
+             return res;
+         }
+         function initPage(){
+             let params=getParameters();
+             ['title', 'subtitle', 'usl', 'lsl', ].forEach(function(item){
+                 if (item in params) document.getElementById('input-'+item).value  = params[item];
+             })
          }
          <?php resizeHandler(); ?>
         </script>
