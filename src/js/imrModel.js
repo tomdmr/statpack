@@ -90,8 +90,9 @@ function IMRRulesCheck(stats, mean, stddev, doRules=null){
  * Draw the IM-R  chart on a div with id divName.
  * We should return something
 */
-function IMRChart(divName, data, myTitle, SL, rules, annotations){
-    console.log(divName)
+function IMRChart(divName, data, myTitle, mySubtitle, SL, rules, annotations){
+    console.log('divName:', divName)
+    console.log('title:', myTitle);
     let IMR_Result = getIMRValues(data);
     let rr = IMRRulesCheck(data, IMR_Result.IBar, (IMR_Result.UCL_I-IMR_Result.LCL_I)/6.0, rules);
 
@@ -185,7 +186,8 @@ function IMRChart(divName, data, myTitle, SL, rules, annotations){
         });
     }
     let layout = {
-        title: myTitle,
+        title: {text: myTitle, subtitle: {text: mySubtitle}},
+        subtitle: {text: 'wtf'},
         //width: 600,
         //height: 400,
         grid: {rows: 2, columns: 1,},
