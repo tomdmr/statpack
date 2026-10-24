@@ -37,15 +37,15 @@ include('config/common.php')
             <div class="row">
                 <div class="col-md-1"></div>
                 <div class="col-md-8">
-                    <div class="input-group mb-3">
+                    <div class="input-group input-group-sm mb-3">
                         <?php inputGroup("input-title", "text", "Titel"); ?>
                         <?php inputGroup("input-subtitle", "text", "Untertitel"); ?>
                     </div>
-                    <div class="input-group mb-3">
+                    <div class="input-group input-group-sm mb-3">
                         <?php inputGroup("input-usl", "number", "USL"); ?>
                         <?php inputGroup("input-lsl", "number", "LSL"); ?>
                     </div>
-                    <div class="input-group mb-3">
+                    <div class="input-group input-group-sm mb-3">
                         <span class="input-group-text" id="input-width">Width</span>
                         <input type="number" id="cWidth" class="form-control" aria-label="" aria-describedby="input-width" value="600">
                         <span class="input-group-text" id="input-width">Height</span>
@@ -136,16 +136,13 @@ include('config/common.php')
              row=table.insertRow(-1); c1 = row.insertCell(-1); c2 = row.insertCell(-1);
              c1.innerHTML = 'UCL R';  c2.innerHTML = sprintf('%8.4f', UCL_MR);
          }
-         function getParameters(){
-             let res = {};
+
+         function initPage(){
+             let params = {};
              location.search.substr(1).split('&').forEach(function(item){
                  let tmp = item.split('=');
-                 res[tmp[0]] = decodeURIComponent(tmp[1]);
+                 params[tmp[0]] = decodeURIComponent(tmp[1]);
              })
-             return res;
-         }
-         function initPage(){
-             let params=getParameters();
              ['title', 'subtitle', 'usl', 'lsl', ].forEach(function(item){
                  if (item in params) document.getElementById('input-'+item).value  = params[item];
              })
