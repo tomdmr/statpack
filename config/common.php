@@ -31,6 +31,17 @@ function plotlyDiagExport(){
     echo "</div>\n";
 }
 
+function dataTextArea(){
+    echo "<div class='row'>\n";
+    echo "  <div class='col-md-1'></div>\n";
+    echo "  <div class='col-md-8'>\n";
+    echo "    <div class='mb-3'>\n";
+    echo "      <label for='exampleFormControlTextarea1' class='form-label'>Daten</label>\n";
+    echo "      <textarea id='tdata' class='form-control' rows='8' cols='60'></textarea>\n";
+    echo "    </div>\n";
+    echo "  </div>\n";
+    echo "</div>\n";
+}
 function resizeHandler(){
     // https://lemonadejs.com/docs/v5/examples/div-onresize/
     echo "function move(e){\n";

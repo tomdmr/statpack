@@ -73,27 +73,8 @@ include('config/common.php')
                 </div>
                 <div class="col-md-1"></div>
             </div>
-            <div class="row">
-                <div class="col-md-1"></div>
-                <div class="col-md-10">
-                    <div id="plotlyDiagram" class="resizable" style="width:600px;height:300px" onresize="resize(this)" onmousemove="move(this)"></div>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-md-1"></div>
-                <div class="col-md-10">
-                    <img id="jpg-export"></img>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-md-1"></div>
-                <div class="col-md-8">
-                    <div class="mb-3">
-                        <label for="exampleFormControlTextarea1" class="form-label">Daten</label>
-                        <textarea id="tdata" class="form-control" rows="8" cols="60"></textarea>
-                    </div>
-                </div>
-            </div>
+            <?php plotlyDiagExport(); ?>
+            <?php dataTextArea(); ?>
         </div>
         <script>
          Array.prototype.removeIf = function(callback) {
