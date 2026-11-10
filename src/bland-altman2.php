@@ -45,7 +45,8 @@ include('config/common.php')
                 <div class="col-md-1"></div>
                 <div class="col-md-8">
                     <div class="input-group mb-3">
-                        <?php inputGroup("title", "text", "Titel"); ?>
+                        <?php inputGroup("input-title", "text", "Titel"); ?>
+                        <?php inputGroup("input-subtitle", "text", "Untertitel"); ?>
                     </div>
                     <div class="input-group mb-3">
                         <span class="input-group-text" id="input-xTitle">Einheit x:</span>
@@ -87,7 +88,9 @@ include('config/common.php')
         </div>
         <script>
          function makeDiag(){
-             let myTitle = document.getElementById('title').value;
+             let myTitle = document.getElementById('input-title').value;
+             let mySubTitle= document.getElementById('input-subtitle').value;
+
              let sampleData = readPairs( document.getElementById('tdata').value );
              //console.log(sampleData);
 
@@ -158,7 +161,7 @@ include('config/common.php')
              let plData = [Data];
              let Shapes = [Bias, lLOA, uLOA];
              let layout = {
-                 title: {text: myTitle},
+                 title: {text: myTitle, subtitle: {text: mySubTitle}},
                  xaxis: {
                      title: {text: document.getElementById('xTitle').value},
                  },
@@ -208,6 +211,16 @@ include('config/common.php')
              row = table.insertRow(-1);c1=row.insertCell(-1); c2=row.insertCell(-1);
              c1.innerHTML='lLOA'; c2.innerHTML=bias-1.96*sd;
 
+         }
+         function initPage(){
+             let params = {};
+             location.search.substr(1).split('&').forEach(function(item){
+                 let tmp = item.split('=');
+                 params[tmp[0]] = decodeURIComponent(tmp[1]);
+             });
+		     ['title', 'subtitle', 'usl', 'lsl',].forEach(function(item){
+                 if (item in params) document.getElementById('input-'+item).value  = params[item];
+		     })
          }
          <?php resizeHandler(); ?>
         </script>
