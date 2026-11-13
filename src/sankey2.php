@@ -33,13 +33,22 @@ include('config/common.php')
         <div class="container-fluid">
             <div class="row">
                 <h2>Sankey Diagram</h2>
-                See info here.
+                Diagramtyp zum Visualisieren von Energie- oder Massenströmen. Die Dateneingabe ist etwas...speziell. In jeder Zeile steht ein Eintrag
+                Quelle;Ziel;Menge
+                Beispiel:
+                <br>
+                Coburger;UF1;75 <br>
+                Heinrichsthaler;UF1;25 <br>
+                UF1;Retentat;96<br>
+                UF1;Permeat;3<br>
+                UF1;Spülverluste;1<br>
             </div>
             <div class="row">
                 <div class="col-md-1"></div>
                 <div class="col-md-8">
                     <div class="input-group mb-3">
-                        <?php inputGroup("title", "text", "Titel"); ?>
+                        <?php inputGroup("input-title", "text", "Titel"); ?>
+                        <?php inputGroup("input-subtitle", "text", "Untertitel"); ?>
                     </div>
                     <div class="input-group mb-3">
                         <span class="input-group-text" id="input-width">Width</span>
@@ -63,12 +72,8 @@ include('config/common.php')
             <div class="row">
                 <?php btnTrigger(); ?>
             </div>
+            <?php plotlyDiagExport(); ?>
         </div>
-        <p>
-            <div id='myDiv' class="resizable" onresize="doResize(this)"></div>
-            <br>
-        </p>
-        <img id="jpg-export"></img>
     </body>
     <script>
      function loadJSON(filename, callback) {   
@@ -121,7 +126,6 @@ include('config/common.php')
          let label  = [];
          let nodes  = [];
 
-         let title = document.getElementById('title').value;
          let tdata = document.getElementById('tdata').value.split('\n');
          console.log(title);
          //console.log(tdata);
@@ -136,8 +140,11 @@ include('config/common.php')
              }
          });
          gobble(values, nodes, link);
-         var layout = {"title": {text: title}}
-         Plotly.newPlot('myDiv',
+         var layout = {}
+                      layout.title = {text: document.getElementById('input-title').value,
+                             subtitle: {text: document.getElementById('input-subtitle').value}
+                      };
+         Plotly.newPlot('plotlyDiagram',
                         [{
                             type: "sankey",
                             arrangement: 'freeform',
